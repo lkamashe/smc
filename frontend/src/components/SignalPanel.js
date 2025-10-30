@@ -35,12 +35,21 @@ const SignalPanel = ({ currentTrade }) => {
 
   const getStatusMessage = (status) => {
     const messages = {
-      Pending: "⏳ Waiting for optimal entry...",
-      Active: "🔥 Trade is running...",
-      TP: "✅ Take Profit Hit!",
-      SL: "❌ Stop Loss Hit"
+      Pending: "⏳ Entry signal detected - Waiting for optimal entry...",
+      Active: "🔥 Trade is LIVE - Monitoring price action...",
+      TP: "✅ TARGET HIT! Trade closed in profit",
+      SL: "❌ Stop Loss Hit - Trade closed"
     };
     return messages[status] || "";
+  };
+  
+  const getTimeElapsed = (timestamp) => {
+    const now = new Date();
+    const tradeTime = new Date(timestamp);
+    const diff = Math.floor((now - tradeTime) / 1000 / 60);
+    if (diff < 60) return `${diff}m ago`;
+    const hours = Math.floor(diff / 60);
+    return `${hours}h ${diff % 60}m ago`;
   };
 
   return (
