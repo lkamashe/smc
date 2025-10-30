@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Cookie
+from fastapi import FastAPI, APIRouter, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -10,7 +10,6 @@ from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional
 import uuid
 from datetime import datetime, timezone, timedelta
-import requests
 import numpy as np
 import random
 
@@ -26,20 +25,6 @@ app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
 # Pydantic Models
-class User(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-    id: str
-    email: str
-    name: str
-    picture: str
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-
-class Session(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-    session_token: str
-    user_id: str
-    expires_at: datetime
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class Trade(BaseModel):
     model_config = ConfigDict(extra="ignore")
