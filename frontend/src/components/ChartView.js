@@ -9,7 +9,7 @@ const ChartView = ({ chartData, currentTrade }) => {
     if (!chartContainerRef.current) return;
 
     // Create chart
-    const chart = createChart(chartContainerRef.current, {
+    const chart = LightweightCharts.createChart(chartContainerRef.current, {
       width: chartContainerRef.current.clientWidth,
       height: 500,
       layout: {
