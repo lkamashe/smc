@@ -192,6 +192,9 @@ const Dashboard = () => {
           </Tabs>
         </div>
       </div>
+      
+      {/* Footer */}
+      <Footer />
     </div>
   );
 };
