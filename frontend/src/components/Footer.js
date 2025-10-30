@@ -55,7 +55,7 @@ const Footer = () => {
             © 2024 XAU SMC Auto Trader. All rights reserved.
           </div>
           <div className="text-gray-500 text-sm mt-4 md:mt-0">
-            Powered by <span className="text-amber-400">Emergent AI</span>
+            Powered by Smart Money Concepts
           </div>
         </div>
       </div>
