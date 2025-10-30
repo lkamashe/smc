@@ -119,7 +119,10 @@ const Dashboard = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                 </svg>
               </div>
-              <h1 className="text-2xl font-bold text-white" style={{ fontFamily: "'Bebas Neue', sans-serif" }}>XAU SMC Auto Trader</h1>
+              <div>
+                <h1 className="text-2xl font-bold text-white" style={{ fontFamily: "'Bebas Neue', sans-serif" }}>XAU SMC Auto Trader</h1>
+                <p className="text-xs text-gray-500">Live Market Analysis • Daily Signal</p>
+              </div>
             </div>
             
             <Badge data-testid="h4-bias-badge" className={`px-4 py-1.5 text-sm font-semibold border ${getBiasColor(h4Bias)}`}>
@@ -128,21 +131,19 @@ const Dashboard = () => {
           </div>
 
           <div className="flex items-center space-x-4">
+            <div className="hidden md:flex items-center space-x-2 px-4 py-2 bg-gray-800/50 rounded-lg border border-gray-700">
+              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+              <span className="text-sm text-gray-400">System Active</span>
+            </div>
+            
             <Button
-              data-testid="scan-now-button"
+              data-testid="manual-scan-button"
               onClick={handleScan}
               disabled={scanning}
-              className="bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-black font-semibold px-6 py-2 rounded-lg shadow-lg shadow-amber-500/30 transition-all duration-300 hover:shadow-amber-500/50 disabled:opacity-50"
+              variant="outline"
+              className="border-amber-500/30 text-amber-400 hover:bg-amber-500/10 text-sm"
             >
-              {scanning ? (
-                <>
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Scanning...
-                </>
-              ) : "Scan Now"}
+              {scanning ? "Scanning..." : "Force Scan"}
             </Button>
           </div>
         </div>
