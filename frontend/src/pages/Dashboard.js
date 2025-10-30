@@ -8,6 +8,8 @@ import ChartView from "../components/ChartView";
 import SignalPanel from "../components/SignalPanel";
 import History from "../components/History";
 import StatsView from "../components/StatsView";
+import LivePrice from "../components/LivePrice";
+import Footer from "../components/Footer";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
