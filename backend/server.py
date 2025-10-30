@@ -75,6 +75,53 @@ class Stats(BaseModel):
     avg_rr: float
     current_streak: int
 
+# Global cache for market data
+market_data_cache = {
+    "h4_data": None,
+    "m15_data": None,
+    "current_price": None,
+    "last_update": None
+}
+
+CACHE_DURATION_SECONDS = 60  # Cache for 1 minute
+
+def get_cached_or_fetch_data():
+    """Get cached market data or fetch new if expired"""
+    global market_data_cache
+    
+    now = datetime.now(timezone.utc)
+    
+    # Check if cache is still valid
+    if market_data_cache["last_update"]:
+        elapsed = (now - market_data_cache["last_update"]).total_seconds()
+        if elapsed < CACHE_DURATION_SECONDS:
+            logging.info("Using cached market data")
+            return {
+                "h4_candles": market_data_cache["h4_data"],
+                "m15_candles": market_data_cache["m15_data"],
+                "current_price": market_data_cache["current_price"]
+            }
+    
+    # Fetch fresh data
+    logging.info("Fetching fresh market data from Twelve Data...")
+    h4_data = fetch_real_market_data("XAU/USD", "4h", 100)
+    m15_data = fetch_real_market_data("XAU/USD", "15min", 200)
+    current_price = get_current_price("XAU/USD")
+    
+    # Update cache
+    market_data_cache = {
+        "h4_data": h4_data,
+        "m15_data": m15_data,
+        "current_price": current_price,
+        "last_update": now
+    }
+    
+    return {
+        "h4_candles": h4_data,
+        "m15_candles": m15_data,
+        "current_price": current_price
+    }
+
 # Helper Functions
 def fetch_real_market_data(symbol="XAU/USD", interval="15min", outputsize=100):
     """Fetch real market data from Twelve Data API"""
