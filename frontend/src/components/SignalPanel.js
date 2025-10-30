@@ -63,16 +63,35 @@ const SignalPanel = ({ currentTrade }) => {
         </Badge>
       </div>
 
-      {/* Status Message */}
-      <div className={`text-center py-4 rounded-lg border-2 ${
-        currentTrade.status === 'TP' ? 'bg-emerald-500/20 border-emerald-500/50 animate-pulse' :
+      {/* Status Message with Animation */}
+      <div className={`text-center py-4 rounded-lg border-2 relative overflow-hidden ${
+        currentTrade.status === 'TP' ? 'bg-emerald-500/20 border-emerald-500/50' :
         currentTrade.status === 'SL' ? 'bg-red-500/20 border-red-500/50' :
         currentTrade.status === 'Active' ? 'bg-green-500/20 border-green-500/50' :
         'bg-blue-500/20 border-blue-500/50'
       }`}>
-        <p className="text-sm font-bold">{getStatusMessage(currentTrade.status)}</p>
-        <p className="text-xs text-gray-400 mt-1">{getTimeElapsed(currentTrade.timestamp)}</p>
+        {currentTrade.status === 'Active' && (
+          <div className="absolute top-0 left-0 h-full bg-gradient-to-r from-green-500/0 via-green-500/30 to-green-500/0 animate-shimmer" style={{width: '100%'}}></div>
+        )}
+        <p className="text-sm font-bold relative z-10">{getStatusMessage(currentTrade.status)}</p>
+        <p className="text-xs text-gray-400 mt-1 relative z-10">{getTimeElapsed(currentTrade.timestamp)}</p>
       </div>
+
+      {/* Progress to TP/SL */}
+      {currentTrade.status === 'Active' && (
+        <div className="space-y-2">
+          <div className="text-xs text-gray-500 text-center">Distance to Target</div>
+          <div className="relative h-2 bg-gray-800 rounded-full overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-r from-red-500 via-amber-500 to-green-500"></div>
+            <div className="absolute inset-0 bg-gray-800" style={{clipPath: 'polygon(50% 0, 100% 0, 100% 100%, 50% 100%)'}}></div>
+          </div>
+          <div className="flex justify-between text-xs">
+            <span className="text-red-400">SL</span>
+            <span className="text-amber-400">Entry</span>
+            <span className="text-green-400">TP</span>
+          </div>
+        </div>
+      )}
 
       <div className="space-y-4">
         {/* Asset & Bias */}
