@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from "react";
-import { createChart } from "lightweight-charts";
+import * as LightweightCharts from "lightweight-charts";
 
 const ChartView = ({ chartData, currentTrade }) => {
   const chartContainerRef = useRef();
