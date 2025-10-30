@@ -304,7 +304,7 @@ def find_m15_setup(m15_candles, h4_bias, order_block):
 # Trading Endpoints
 @api_router.get("/analysis/scan")
 async def scan_market():
-    """Perform full market analysis"""
+    """Perform full market analysis using REAL market data"""
     # Check if there's already an active trade today
     today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
     existing_trade = await db.trades.find_one({
@@ -319,38 +319,56 @@ async def scan_market():
             "trade_signal": None
         }
     
-    # Generate mock data
-    h4_candles = generate_mock_candles("H4", 100)
-    m15_candles = generate_mock_candles("M15", 200)
+    # Fetch REAL market data
+    logging.info("Fetching real H4 data from Twelve Data...")
+    h4_candles = fetch_real_market_data("XAU/USD", "4h", 100)
     
-    # Analyze H4 structure
+    logging.info("Fetching real M15 data from Twelve Data...")
+    m15_candles = fetch_real_market_data("XAU/USD", "15min", 200)
+    
+    # Get current price
+    current_price = get_current_price("XAU/USD")
+    
+    if not h4_candles or not m15_candles or not current_price:
+        return {
+            "h4_bias": "Error",
+            "message": "Failed to fetch market data. Please try again.",
+            "trade_signal": None
+        }
+    
+    logging.info(f"Current XAUUSD price: ${current_price}")
+    logging.info(f"H4 candles: {len(h4_candles)}, M15 candles: {len(m15_candles)}")
+    
+    # Analyze H4 structure with real data
     h4_analysis = analyze_structure(h4_candles, "H4")
     h4_bias = h4_analysis["bias"]
     
     if h4_bias == "Neutral":
         return {
             "h4_bias": "Neutral",
-            "message": "No Trade Today - No clear structure",
+            "message": "No clear H4 structure - Waiting for better setup",
             "h4_analysis": h4_analysis,
-            "trade_signal": None
+            "trade_signal": None,
+            "current_price": current_price
         }
     
     # Find order block
     order_block = find_order_block(h4_candles, h4_bias, h4_analysis)
     
-    # Find M15 setup
-    m15_setup = find_m15_setup(m15_candles, h4_bias, order_block)
+    # Find M15 setup based on CURRENT PRICE
+    m15_setup = find_m15_setup_real(m15_candles, h4_bias, order_block, current_price)
     
     if not m15_setup:
         return {
             "h4_bias": h4_bias,
-            "message": "No valid M15 setup found yet",
+            "message": "H4 bias confirmed but no valid M15 entry yet - Monitoring...",
             "h4_analysis": h4_analysis,
             "order_block": order_block,
-            "trade_signal": None
+            "trade_signal": None,
+            "current_price": current_price
         }
     
-    # Create trade
+    # Create trade based on REAL prices
     rr = round(abs(m15_setup["tp"] - m15_setup["entry"]) / abs(m15_setup["entry"] - m15_setup["sl"]), 1)
     
     trade = Trade(
@@ -367,7 +385,8 @@ async def scan_market():
             "m15_candles": m15_candles[-100:],
             "h4_analysis": h4_analysis,
             "order_block": order_block,
-            "m15_setup": m15_setup
+            "m15_setup": m15_setup,
+            "current_price": current_price
         },
         note="Immutable until TP or SL is hit"
     )
@@ -379,10 +398,11 @@ async def scan_market():
     
     return {
         "h4_bias": h4_bias,
-        "message": "New signal generated!",
+        "message": "New signal generated from REAL market data!",
         "h4_analysis": h4_analysis,
         "order_block": order_block,
         "m15_setup": m15_setup,
+        "current_price": current_price,
         "trade_signal": TradeResponse(
             id=trade.id,
             asset=trade.asset,
