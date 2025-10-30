@@ -144,7 +144,7 @@ const Dashboard = () => {
 
           {/* Signal Panel - 1 column */}
           <div>
-            <SignalPanel currentTrade={currentTrade} onUpdateStatus={handleUpdateStatus} />
+            <SignalPanel currentTrade={currentTrade} />
           </div>
         </div>
 
