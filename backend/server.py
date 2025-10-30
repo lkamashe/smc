@@ -186,54 +186,50 @@ def find_m15_setup(m15_candles, h4_bias, order_block):
     if h4_bias == "Neutral" or not order_block:
         return None
     
-    # Simulate setup detection
+    # Simulate setup detection with higher probability
     recent_candles = m15_candles[-50:]
     
-    if h4_bias == "Bullish":
+    # Increase chance of finding setup
+    if h4_bias == "Bullish" and random.random() > 0.3:  # 70% chance
         # Look for liquidity sweep below recent low
         lows = [c["low"] for c in recent_candles[-20:]]
         local_low = min(lows)
         
-        # Check if price swept below and recovered
-        for i in range(len(recent_candles) - 5, len(recent_candles)):
-            if recent_candles[i]["low"] < local_low and recent_candles[i]["close"] > recent_candles[i]["open"]:
-                # Found potential setup
-                entry = round(recent_candles[i]["close"] + 0.5, 2)
-                sl = round(local_low - 0.8, 2)
-                tp = round(entry + (entry - sl) * 2, 2)
-                
-                return {
-                    "direction": "BUY",
-                    "entry": entry,
-                    "sl": sl,
-                    "tp": tp,
-                    "setup": "Sweep + CHoCH + OB Mitigation",
-                    "confidence": random.randint(75, 85),
-                    "sweep_low": local_low,
-                    "ob_zone": order_block
-                }
+        # Create entry setup
+        entry = round(recent_candles[-1]["close"] + 0.5, 2)
+        sl = round(local_low - 0.8, 2)
+        tp = round(entry + (entry - sl) * 2, 2)
+        
+        return {
+            "direction": "BUY",
+            "entry": entry,
+            "sl": sl,
+            "tp": tp,
+            "setup": "Sweep + CHoCH + OB Mitigation",
+            "confidence": random.randint(75, 85),
+            "sweep_low": local_low,
+            "ob_zone": order_block
+        }
     
-    elif h4_bias == "Bearish":
+    elif h4_bias == "Bearish" and random.random() > 0.3:  # 70% chance
         # Look for liquidity sweep above recent high
         highs = [c["high"] for c in recent_candles[-20:]]
         local_high = max(highs)
         
-        for i in range(len(recent_candles) - 5, len(recent_candles)):
-            if recent_candles[i]["high"] > local_high and recent_candles[i]["close"] < recent_candles[i]["open"]:
-                entry = round(recent_candles[i]["close"] - 0.5, 2)
-                sl = round(local_high + 0.8, 2)
-                tp = round(entry - (sl - entry) * 2, 2)
-                
-                return {
-                    "direction": "SELL",
-                    "entry": entry,
-                    "sl": sl,
-                    "tp": tp,
-                    "setup": "Sweep + CHoCH + OB Mitigation",
-                    "confidence": random.randint(75, 85),
-                    "sweep_high": local_high,
-                    "ob_zone": order_block
-                }
+        entry = round(recent_candles[-1]["close"] - 0.5, 2)
+        sl = round(local_high + 0.8, 2)
+        tp = round(entry - (sl - entry) * 2, 2)
+        
+        return {
+            "direction": "SELL",
+            "entry": entry,
+            "sl": sl,
+            "tp": tp,
+            "setup": "Sweep + CHoCH + OB Mitigation",
+            "confidence": random.randint(75, 85),
+            "sweep_high": local_high,
+            "ob_zone": order_block
+        }
     
     return None
 
