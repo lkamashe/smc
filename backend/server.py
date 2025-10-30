@@ -237,94 +237,9 @@ def find_m15_setup(m15_candles, h4_bias, order_block):
     
     return None
 
-# Auth Endpoints
-@api_router.post("/auth/session")
-async def create_session(request: Request, response: Response):
-    """Process session_id from Emergent Auth"""
-    data = await request.json()
-    session_id = data.get("session_id")
-    
-    if not session_id:
-        raise HTTPException(status_code=400, detail="session_id required")
-    
-    # Get session data from Emergent
-    try:
-        auth_response = requests.get(
-            "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data",
-            headers={"X-Session-ID": session_id}
-        )
-        auth_response.raise_for_status()
-        user_data = auth_response.json()
-    except Exception as e:
-        raise HTTPException(status_code=401, detail=f"Invalid session: {str(e)}")
-    
-    # Check if user exists
-    existing_user = await db.users.find_one({"email": user_data["email"]}, {"_id": 0})
-    
-    if not existing_user:
-        # Create new user
-        user = User(
-            id=user_data["id"],
-            email=user_data["email"],
-            name=user_data["name"],
-            picture=user_data["picture"]
-        )
-        user_dict = user.model_dump()
-        user_dict["created_at"] = user_dict["created_at"].isoformat()
-        await db.users.insert_one(user_dict)
-    else:
-        user = User(**existing_user)
-    
-    # Create session
-    session_token = user_data["session_token"]
-    expires_at = datetime.now(timezone.utc) + timedelta(days=7)
-    
-    session = Session(
-        session_token=session_token,
-        user_id=user.id,
-        expires_at=expires_at
-    )
-    
-    session_dict = session.model_dump()
-    session_dict["expires_at"] = session_dict["expires_at"].isoformat()
-    session_dict["created_at"] = session_dict["created_at"].isoformat()
-    
-    await db.sessions.insert_one(session_dict)
-    
-    # Set cookie
-    response.set_cookie(
-        key="session_token",
-        value=session_token,
-        httponly=True,
-        secure=True,
-        samesite="none",
-        max_age=7 * 24 * 60 * 60,
-        path="/"
-    )
-    
-    return {"user": user.model_dump(), "session_token": session_token}
-
-@api_router.get("/auth/me")
-async def get_current_user(request: Request):
-    """Get current authenticated user"""
-    user = await get_user_from_cookie(request)
-    if not user:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    return user.model_dump()
-
-@api_router.post("/auth/logout")
-async def logout(request: Request, response: Response):
-    """Logout user"""
-    session_token = request.cookies.get("session_token")
-    if session_token:
-        await db.sessions.delete_one({"session_token": session_token})
-    
-    response.delete_cookie(key="session_token", path="/")
-    return {"message": "Logged out successfully"}
-
 # Trading Endpoints
 @api_router.get("/analysis/scan")
-async def scan_market(request: Request):
+async def scan_market():
     """Perform full market analysis"""
     user = await get_user_from_cookie(request)
     if not user:
