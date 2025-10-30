@@ -19,10 +19,6 @@ const Dashboard = () => {
   const [chartData, setChartData] = useState(null);
   const [activeTab, setActiveTab] = useState("signal");
 
-  useEffect(() => {
-    loadCurrentTrade();
-  }, []);
-
   const loadCurrentTrade = async () => {
     try {
       const response = await axios.get(`${API}/trades/current`);
@@ -30,11 +26,26 @@ const Dashboard = () => {
         setCurrentTrade(response.data);
         setH4Bias(response.data.bias);
         setChartData(response.data.chart_snapshot);
+      } else {
+        // No current trade
+        setCurrentTrade(null);
+        setChartData(null);
       }
     } catch (error) {
       console.error("Error loading trade:", error);
     }
   };
+
+  useEffect(() => {
+    loadCurrentTrade();
+    
+    // Auto-refresh every 10 seconds to check trade status
+    const interval = setInterval(() => {
+      loadCurrentTrade();
+    }, 10000);
+    
+    return () => clearInterval(interval);
+  }, []);
 
   const handleScan = async () => {
     setScanning(true);
