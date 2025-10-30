@@ -290,7 +290,6 @@ async def scan_market():
     rr = round(abs(m15_setup["tp"] - m15_setup["entry"]) / abs(m15_setup["entry"] - m15_setup["sl"]), 1)
     
     trade = Trade(
-        user_id=user.id,
         bias=h4_bias,
         setup=m15_setup["setup"],
         entry_price=m15_setup["entry"],
