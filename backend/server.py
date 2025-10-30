@@ -350,14 +350,10 @@ async def get_current_trade():
     return trade
 
 @api_router.get("/trades/history")
-async def get_trade_history(request: Request):
+async def get_trade_history():
     """Get all historical trades"""
-    user = await get_user_from_cookie(request)
-    if not user:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    
     trades = await db.trades.find(
-        {"user_id": user.id},
+        {},
         {"_id": 0}
     ).sort("timestamp", -1).to_list(100)
     
@@ -366,17 +362,13 @@ async def get_trade_history(request: Request):
 @api_router.put("/trades/{trade_id}/status")
 async def update_trade_status(trade_id: str, request: Request):
     """Update trade status (simulate TP/SL hit)"""
-    user = await get_user_from_cookie(request)
-    if not user:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    
     data = await request.json()
     new_status = data.get("status")  # "TP" or "SL" or "Active"
     
     if new_status not in ["Active", "TP", "SL"]:
         raise HTTPException(status_code=400, detail="Invalid status")
     
-    trade = await db.trades.find_one({"id": trade_id, "user_id": user.id})
+    trade = await db.trades.find_one({"id": trade_id})
     if not trade:
         raise HTTPException(status_code=404, detail="Trade not found")
     
@@ -394,14 +386,10 @@ async def update_trade_status(trade_id: str, request: Request):
     return {"message": "Trade updated", "status": new_status}
 
 @api_router.get("/stats")
-async def get_stats(request: Request):
+async def get_stats():
     """Get trading statistics"""
-    user = await get_user_from_cookie(request)
-    if not user:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    
     all_trades = await db.trades.find(
-        {"user_id": user.id, "result": {"$exists": True}},
+        {"result": {"$exists": True}},
         {"_id": 0}
     ).to_list(1000)
     
