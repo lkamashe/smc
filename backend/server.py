@@ -75,30 +75,6 @@ class Stats(BaseModel):
     current_streak: int
 
 # Helper Functions
-async def get_user_from_cookie(request: Request) -> Optional[User]:
-    """Get user from session token in cookie"""
-    session_token = request.cookies.get("session_token")
-    if not session_token:
-        auth_header = request.headers.get("Authorization")
-        if auth_header and auth_header.startswith("Bearer "):
-            session_token = auth_header.split(" ")[1]
-    
-    if not session_token:
-        return None
-    
-    session = await db.sessions.find_one({"session_token": session_token})
-    if not session:
-        return None
-    
-    if datetime.fromisoformat(session["expires_at"]) < datetime.now(timezone.utc):
-        await db.sessions.delete_one({"session_token": session_token})
-        return None
-    
-    user = await db.users.find_one({"id": session["user_id"]}, {"_id": 0})
-    if user and 'created_at' in user and isinstance(user['created_at'], str):
-        user['created_at'] = datetime.fromisoformat(user['created_at'])
-    return User(**user) if user else None
-
 def generate_mock_candles(timeframe: str, count: int = 100):
     """Generate mock XAUUSD candles"""
     base_price = 2360.0
