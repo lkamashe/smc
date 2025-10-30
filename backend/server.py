@@ -336,14 +336,10 @@ async def scan_market():
     }
 
 @api_router.get("/trades/current")
-async def get_current_trade(request: Request):
+async def get_current_trade():
     """Get current active/pending trade"""
-    user = await get_user_from_cookie(request)
-    if not user:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    
     trade = await db.trades.find_one(
-        {"user_id": user.id, "status": {"$in": ["Pending", "Active"]}},
+        {"status": {"$in": ["Pending", "Active"]}},
         {"_id": 0},
         sort=[("timestamp", -1)]
     )
