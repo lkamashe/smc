@@ -241,14 +241,9 @@ def find_m15_setup(m15_candles, h4_bias, order_block):
 @api_router.get("/analysis/scan")
 async def scan_market():
     """Perform full market analysis"""
-    user = await get_user_from_cookie(request)
-    if not user:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    
     # Check if there's already an active trade today
     today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
     existing_trade = await db.trades.find_one({
-        "user_id": user.id,
         "timestamp": {"$gte": today_start.isoformat()},
         "status": {"$in": ["Pending", "Active"]}
     })
