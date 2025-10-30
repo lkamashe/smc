@@ -333,7 +333,7 @@ async def scan_market():
 
 @api_router.get("/trades/current")
 async def get_current_trade():
-    """Get current active/pending trade"""
+    """Get current active/pending trade and auto-update status"""
     trade = await db.trades.find_one(
         {"status": {"$in": ["Pending", "Active"]}},
         {"_id": 0},
@@ -342,6 +342,45 @@ async def get_current_trade():
     
     if not trade:
         return None
+    
+    # Auto-simulate trade progression
+    if trade["status"] == "Pending":
+        # Auto-activate after 2 minutes
+        created_time = datetime.fromisoformat(trade["timestamp"])
+        if datetime.now(timezone.utc) - created_time > timedelta(minutes=2):
+            await db.trades.update_one(
+                {"id": trade["id"]},
+                {"$set": {"status": "Active"}}
+            )
+            trade["status"] = "Active"
+    
+    elif trade["status"] == "Active":
+        # Simulate market movement and check if TP or SL hit
+        # Generate random outcome weighted by confidence
+        created_time = datetime.fromisoformat(trade["timestamp"])
+        elapsed_minutes = (datetime.now(timezone.utc) - created_time).total_seconds() / 60
+        
+        # After 5 minutes, determine outcome based on confidence
+        if elapsed_minutes > 5:
+            confidence = trade.get("confidence", 75)
+            # Higher confidence = higher chance of hitting TP
+            hit_tp = random.randint(1, 100) <= confidence
+            
+            new_status = "TP" if hit_tp else "SL"
+            result = "Win" if hit_tp else "Loss"
+            
+            await db.trades.update_one(
+                {"id": trade["id"]},
+                {"$set": {
+                    "status": new_status,
+                    "result": result,
+                    "closed_at": datetime.now(timezone.utc).isoformat()
+                }}
+            )
+            
+            trade["status"] = new_status
+            trade["result"] = result
+            trade["closed_at"] = datetime.now(timezone.utc).isoformat()
     
     return trade
 
