@@ -28,6 +28,170 @@ db = client[os.environ['DB_NAME']]
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
+# Initialize scheduler
+scheduler = AsyncIOScheduler()
+
+# Background tasks
+async def background_market_scan():
+    """Background task: Scan market every 30 minutes"""
+    try:
+        logging.info("🤖 Background Scan: Starting automated market analysis...")
+        
+        # Check if there's already an active trade today
+        today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        existing_trade = await db.trades.find_one({
+            "timestamp": {"$gte": today_start.isoformat()},
+            "status": {"$in": ["Pending", "Active"]}
+        })
+        
+        if existing_trade:
+            logging.info("Background Scan: Active trade already exists")
+            return
+        
+        # Get market data
+        market_data = get_cached_or_fetch_data()
+        h4_candles = market_data["h4_candles"]
+        m15_candles = market_data["m15_candles"]
+        current_price = market_data["current_price"]
+        
+        if not h4_candles or not m15_candles or not current_price:
+            logging.error("Background Scan: Failed to fetch market data")
+            return
+        
+        # Analyze H4 structure
+        h4_analysis = analyze_structure(h4_candles, "H4")
+        h4_bias = h4_analysis["bias"]
+        
+        if h4_bias == "Neutral":
+            logging.info("Background Scan: No clear H4 structure yet")
+            return
+        
+        # Find order block and M15 setup
+        order_block = find_order_block(h4_candles, h4_bias, h4_analysis)
+        m15_setup = find_m15_setup_real(m15_candles, h4_bias, order_block, current_price)
+        
+        if not m15_setup:
+            logging.info(f"Background Scan: H4 bias is {h4_bias} but no valid M15 entry yet")
+            return
+        
+        # Create trade
+        rr = round(abs(m15_setup["tp"] - m15_setup["entry"]) / abs(m15_setup["entry"] - m15_setup["sl"]), 1)
+        
+        trade = Trade(
+            bias=h4_bias,
+            setup=m15_setup["setup"],
+            entry_price=m15_setup["entry"],
+            stop_loss=m15_setup["sl"],
+            take_profit=m15_setup["tp"],
+            risk_reward=f"1:{rr}",
+            confidence=m15_setup["confidence"],
+            status="Pending",
+            chart_snapshot={
+                "h4_candles": h4_candles[-50:],
+                "m15_candles": m15_candles[-100:],
+                "h4_analysis": h4_analysis,
+                "order_block": order_block,
+                "m15_setup": m15_setup,
+                "current_price": current_price
+            },
+            note="Immutable until TP or SL is hit"
+        )
+        
+        trade_dict = trade.model_dump()
+        trade_dict["timestamp"] = trade_dict["timestamp"].isoformat()
+        
+        await db.trades.insert_one(trade_dict)
+        
+        logging.info(f"✅ Background Scan: New trade created! {h4_bias} @ ${m15_setup['entry']}")
+        
+    except Exception as e:
+        logging.error(f"Background Scan Error: {str(e)}")
+
+async def background_trade_monitor():
+    """Background task: Monitor active trades every minute"""
+    try:
+        # Get current active/pending trade
+        trade = await db.trades.find_one(
+            {"status": {"$in": ["Pending", "Active"]}},
+            {"_id": 0},
+            sort=[("timestamp", -1)]
+        )
+        
+        if not trade:
+            return
+        
+        # Get current price
+        current_price = get_current_price("XAU/USD")
+        
+        if not current_price:
+            return
+        
+        trade_id = trade["id"]
+        entry = trade["entry_price"]
+        tp = trade["take_profit"]
+        sl = trade["stop_loss"]
+        bias = trade["bias"]
+        status = trade["status"]
+        
+        # Check if entry hit (Pending -> Active)
+        if status == "Pending":
+            if bias == "Bullish" and current_price >= entry:
+                await db.trades.update_one(
+                    {"id": trade_id},
+                    {"$set": {"status": "Active", "activated_at": datetime.now(timezone.utc).isoformat()}}
+                )
+                logging.info(f"✅ Trade {trade_id} ACTIVATED at ${current_price}")
+                
+            elif bias == "Bearish" and current_price <= entry:
+                await db.trades.update_one(
+                    {"id": trade_id},
+                    {"$set": {"status": "Active", "activated_at": datetime.now(timezone.utc).isoformat()}}
+                )
+                logging.info(f"✅ Trade {trade_id} ACTIVATED at ${current_price}")
+        
+        # Check if TP or SL hit (Active -> TP/SL)
+        elif status == "Active":
+            hit_tp = False
+            hit_sl = False
+            
+            if bias == "Bullish":
+                if current_price >= tp:
+                    hit_tp = True
+                elif current_price <= sl:
+                    hit_sl = True
+            elif bias == "Bearish":
+                if current_price <= tp:
+                    hit_tp = True
+                elif current_price >= sl:
+                    hit_sl = True
+            
+            if hit_tp:
+                await db.trades.update_one(
+                    {"id": trade_id},
+                    {"$set": {
+                        "status": "TP",
+                        "result": "Win",
+                        "closed_at": datetime.now(timezone.utc).isoformat(),
+                        "exit_price": current_price
+                    }}
+                )
+                logging.info(f"🎯 Trade {trade_id} HIT TP at ${current_price} - WIN!")
+                
+            elif hit_sl:
+                await db.trades.update_one(
+                    {"id": trade_id},
+                    {"$set": {
+                        "status": "SL",
+                        "result": "Loss",
+                        "closed_at": datetime.now(timezone.utc).isoformat(),
+                        "exit_price": current_price
+                    }}
+                )
+                logging.info(f"❌ Trade {trade_id} HIT SL at ${current_price} - LOSS")
+                
+    except Exception as e:
+        logging.error(f"Trade Monitor Error: {str(e)}")
+
 # Pydantic Models
 
 class Trade(BaseModel):
