@@ -75,6 +75,74 @@ class Stats(BaseModel):
     current_streak: int
 
 # Helper Functions
+def fetch_real_market_data(symbol="XAU/USD", interval="15min", outputsize=100):
+    """Fetch real market data from Twelve Data API"""
+    api_key = os.environ.get('TWELVE_DATA_API_KEY')
+    if not api_key:
+        return None
+    
+    try:
+        url = f"https://api.twelvedata.com/time_series"
+        params = {
+            "symbol": symbol,
+            "interval": interval,
+            "apikey": api_key,
+            "outputsize": outputsize,
+            "format": "JSON"
+        }
+        
+        response = requests.get(url, params=params, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        
+        if data.get("status") == "error":
+            logging.error(f"Twelve Data API Error: {data.get('message')}")
+            return None
+        
+        # Convert to candles format
+        candles = []
+        if "values" in data:
+            for i, item in enumerate(data["values"]):
+                candles.append({
+                    "time": i,
+                    "open": float(item["open"]),
+                    "high": float(item["high"]),
+                    "low": float(item["low"]),
+                    "close": float(item["close"])
+                })
+        
+        # Reverse to get chronological order
+        return candles[::-1] if candles else None
+        
+    except Exception as e:
+        logging.error(f"Error fetching market data: {str(e)}")
+        return None
+
+def get_current_price(symbol="XAU/USD"):
+    """Get current real-time price"""
+    api_key = os.environ.get('TWELVE_DATA_API_KEY')
+    if not api_key:
+        return None
+    
+    try:
+        url = f"https://api.twelvedata.com/price"
+        params = {
+            "symbol": symbol,
+            "apikey": api_key
+        }
+        
+        response = requests.get(url, params=params, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        
+        if "price" in data:
+            return float(data["price"])
+        return None
+        
+    except Exception as e:
+        logging.error(f"Error fetching current price: {str(e)}")
+        return None
+
 def generate_mock_candles(timeframe: str, count: int = 100):
     """Generate mock XAUUSD candles"""
     base_price = 2360.0
