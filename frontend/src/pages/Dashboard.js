@@ -75,16 +75,6 @@ const Dashboard = () => {
     }
   };
 
-  const handleUpdateStatus = async (tradeId, status) => {
-    try {
-      await axios.put(`${API}/trades/${tradeId}/status`, { status });
-      toast.success(`Trade status updated to ${status}`);
-      await loadCurrentTrade();
-    } catch (error) {
-      toast.error("Failed to update trade status");
-    }
-  };
-
   const getBiasColor = (bias) => {
     switch(bias) {
       case "Bullish": return "bg-green-500/20 text-green-400 border-green-500/50";
