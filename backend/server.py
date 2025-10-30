@@ -436,15 +436,11 @@ async def scan_market():
             "trade_signal": None
         }
     
-    # Fetch REAL market data
-    logging.info("Fetching real H4 data from Twelve Data...")
-    h4_candles = fetch_real_market_data("XAU/USD", "4h", 100)
-    
-    logging.info("Fetching real M15 data from Twelve Data...")
-    m15_candles = fetch_real_market_data("XAU/USD", "15min", 200)
-    
-    # Get current price
-    current_price = get_current_price("XAU/USD")
+    # Get cached or fetch fresh data
+    market_data = get_cached_or_fetch_data()
+    h4_candles = market_data["h4_candles"]
+    m15_candles = market_data["m15_candles"]
+    current_price = market_data["current_price"]
     
     if not h4_candles or not m15_candles or not current_price:
         return {
