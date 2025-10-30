@@ -152,13 +152,13 @@ const Dashboard = () => {
       {/* Main Content */}
       <div className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Chart View - 2 columns */}
+          {/* Chart View - Full width on desktop */}
           <div className="lg:col-span-2">
             <ChartView chartData={chartData} currentTrade={currentTrade} />
           </div>
 
-          {/* Signal Panel - 1 column */}
-          <div>
+          {/* Signal Panel - Sticky on desktop */}
+          <div className="lg:sticky lg:top-24 h-fit">
             <SignalPanel currentTrade={currentTrade} />
           </div>
         </div>
