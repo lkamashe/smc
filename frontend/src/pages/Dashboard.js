@@ -12,7 +12,7 @@ import StatsView from "../components/StatsView";
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
-const Dashboard = ({ user, setUser }) => {
+const Dashboard = () => {
   const [scanning, setScanning] = useState(false);
   const [h4Bias, setH4Bias] = useState("Neutral");
   const [currentTrade, setCurrentTrade] = useState(null);
@@ -74,16 +74,6 @@ const Dashboard = ({ user, setUser }) => {
     }
   };
 
-  const handleLogout = async () => {
-    try {
-      await axios.post(`${API}/auth/logout`);
-      setUser(null);
-      window.location.href = "/";
-    } catch (error) {
-      console.error("Logout error:", error);
-    }
-  };
-
   const getBiasColor = (bias) => {
     switch(bias) {
       case "Bullish": return "bg-green-500/20 text-green-400 border-green-500/50";
@@ -129,22 +119,6 @@ const Dashboard = ({ user, setUser }) => {
                 </>
               ) : "Scan Now"}
             </Button>
-            
-            <div className="flex items-center space-x-3">
-              <img src={user.picture} alt={user.name} className="w-10 h-10 rounded-full border-2 border-amber-500/50" />
-              <div className="text-left hidden md:block">
-                <div className="text-sm font-medium text-white">{user.name}</div>
-                <div className="text-xs text-gray-400">{user.email}</div>
-              </div>
-              <Button
-                data-testid="logout-button"
-                onClick={handleLogout}
-                variant="ghost"
-                className="text-gray-400 hover:text-white"
-              >
-                Logout
-              </Button>
-            </div>
           </div>
         </div>
       </header>
