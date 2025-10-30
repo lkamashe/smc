@@ -1,5 +1,23 @@
 @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
 
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s infinite;
+}
+
+@keyframes glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(251, 191, 36, 0.3); }
+  50% { box-shadow: 0 0 40px rgba(251, 191, 36, 0.6); }
+}
+
+.animate-glow {
+  animation: glow 2s infinite;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -23,4 +41,9 @@ code {
 
 .App {
   min-height: 100vh;
+}
+
+/* Smooth number transitions */
+.transition-number {
+  transition: all 0.3s ease-in-out;
 }
