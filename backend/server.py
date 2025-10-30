@@ -490,7 +490,7 @@ async def scan_market():
 
 @api_router.get("/trades/current")
 async def get_current_trade():
-    """Get current active/pending trade and auto-update status"""
+    """Get current active/pending trade and auto-update status based on REAL price"""
     trade = await db.trades.find_one(
         {"status": {"$in": ["Pending", "Active"]}},
         {"_id": 0},
@@ -500,44 +500,83 @@ async def get_current_trade():
     if not trade:
         return None
     
-    # Auto-simulate trade progression
-    if trade["status"] == "Pending":
-        # Auto-activate after 2 minutes
-        created_time = datetime.fromisoformat(trade["timestamp"])
-        if datetime.now(timezone.utc) - created_time > timedelta(minutes=2):
-            await db.trades.update_one(
-                {"id": trade["id"]},
-                {"$set": {"status": "Active"}}
-            )
-            trade["status"] = "Active"
+    # Get current real price
+    current_price = get_current_price("XAU/USD")
     
-    elif trade["status"] == "Active":
-        # Simulate market movement and check if TP or SL hit
-        # Generate random outcome weighted by confidence
-        created_time = datetime.fromisoformat(trade["timestamp"])
-        elapsed_minutes = (datetime.now(timezone.utc) - created_time).total_seconds() / 60
+    if current_price:
+        trade["current_market_price"] = current_price
         
-        # After 5 minutes, determine outcome based on confidence
-        if elapsed_minutes > 5:
-            confidence = trade.get("confidence", 75)
-            # Higher confidence = higher chance of hitting TP
-            hit_tp = random.randint(1, 100) <= confidence
+        # Auto-check if entry price is hit
+        if trade["status"] == "Pending":
+            entry = trade["entry_price"]
+            bias = trade["bias"]
             
-            new_status = "TP" if hit_tp else "SL"
-            result = "Win" if hit_tp else "Loss"
+            # Check if entry condition met
+            if bias == "Bullish" and current_price >= entry:
+                await db.trades.update_one(
+                    {"id": trade["id"]},
+                    {"$set": {"status": "Active", "activated_at": datetime.now(timezone.utc).isoformat()}}
+                )
+                trade["status"] = "Active"
+                logging.info(f"Trade {trade['id']} activated at price ${current_price}")
+                
+            elif bias == "Bearish" and current_price <= entry:
+                await db.trades.update_one(
+                    {"id": trade["id"]},
+                    {"$set": {"status": "Active", "activated_at": datetime.now(timezone.utc).isoformat()}}
+                )
+                trade["status"] = "Active"
+                logging.info(f"Trade {trade['id']} activated at price ${current_price}")
+        
+        # Check if TP or SL hit for active trades
+        elif trade["status"] == "Active":
+            tp = trade["take_profit"]
+            sl = trade["stop_loss"]
+            bias = trade["bias"]
             
-            await db.trades.update_one(
-                {"id": trade["id"]},
-                {"$set": {
-                    "status": new_status,
-                    "result": result,
-                    "closed_at": datetime.now(timezone.utc).isoformat()
-                }}
-            )
+            hit_tp = False
+            hit_sl = False
             
-            trade["status"] = new_status
-            trade["result"] = result
-            trade["closed_at"] = datetime.now(timezone.utc).isoformat()
+            if bias == "Bullish":
+                if current_price >= tp:
+                    hit_tp = True
+                elif current_price <= sl:
+                    hit_sl = True
+            elif bias == "Bearish":
+                if current_price <= tp:
+                    hit_tp = True
+                elif current_price >= sl:
+                    hit_sl = True
+            
+            if hit_tp:
+                await db.trades.update_one(
+                    {"id": trade["id"]},
+                    {"$set": {
+                        "status": "TP",
+                        "result": "Win",
+                        "closed_at": datetime.now(timezone.utc).isoformat(),
+                        "exit_price": current_price
+                    }}
+                )
+                trade["status"] = "TP"
+                trade["result"] = "Win"
+                trade["exit_price"] = current_price
+                logging.info(f"Trade {trade['id']} hit TP at ${current_price}")
+                
+            elif hit_sl:
+                await db.trades.update_one(
+                    {"id": trade["id"]},
+                    {"$set": {
+                        "status": "SL",
+                        "result": "Loss",
+                        "closed_at": datetime.now(timezone.utc).isoformat(),
+                        "exit_price": current_price
+                    }}
+                )
+                trade["status"] = "SL"
+                trade["result"] = "Loss"
+                trade["exit_price"] = current_price
+                logging.info(f"Trade {trade['id']} hit SL at ${current_price}")
     
     return trade
 
