@@ -64,13 +64,14 @@ const SignalPanel = ({ currentTrade }) => {
       </div>
 
       {/* Status Message */}
-      <div className={`text-center py-3 rounded-lg ${
-        currentTrade.status === 'TP' ? 'bg-emerald-500/10 border border-emerald-500/30' :
-        currentTrade.status === 'SL' ? 'bg-red-500/10 border border-red-500/30' :
-        currentTrade.status === 'Active' ? 'bg-green-500/10 border border-green-500/30' :
-        'bg-blue-500/10 border border-blue-500/30'
+      <div className={`text-center py-4 rounded-lg border-2 ${
+        currentTrade.status === 'TP' ? 'bg-emerald-500/20 border-emerald-500/50 animate-pulse' :
+        currentTrade.status === 'SL' ? 'bg-red-500/20 border-red-500/50' :
+        currentTrade.status === 'Active' ? 'bg-green-500/20 border-green-500/50' :
+        'bg-blue-500/20 border-blue-500/50'
       }`}>
-        <p className="text-sm font-semibold">{getStatusMessage(currentTrade.status)}</p>
+        <p className="text-sm font-bold">{getStatusMessage(currentTrade.status)}</p>
+        <p className="text-xs text-gray-400 mt-1">{getTimeElapsed(currentTrade.timestamp)}</p>
       </div>
 
       <div className="space-y-4">
