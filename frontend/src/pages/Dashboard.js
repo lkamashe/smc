@@ -37,14 +37,38 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
+    // Load current trade immediately
     loadCurrentTrade();
+    
+    // Auto-scan on mount if no trade exists
+    const checkAndScan = async () => {
+      try {
+        const response = await axios.get(`${API}/trades/current`);
+        if (!response.data) {
+          // No trade exists, auto-scan
+          handleScan();
+        }
+      } catch (error) {
+        console.error("Error checking trade:", error);
+      }
+    };
+    
+    checkAndScan();
     
     // Auto-refresh every 10 seconds to check trade status
     const interval = setInterval(() => {
       loadCurrentTrade();
     }, 10000);
     
-    return () => clearInterval(interval);
+    // Auto-scan every 30 minutes to check for new opportunities
+    const scanInterval = setInterval(() => {
+      handleScan();
+    }, 30 * 60 * 1000);
+    
+    return () => {
+      clearInterval(interval);
+      clearInterval(scanInterval);
+    };
   }, []);
 
   const handleScan = async () => {
