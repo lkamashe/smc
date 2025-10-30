@@ -894,6 +894,46 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+@app.on_event("startup")
+async def startup_event():
+    """Start background scheduler on app startup"""
+    try:
+        # Add market scan job - every 30 minutes
+        scheduler.add_job(
+            background_market_scan,
+            trigger=IntervalTrigger(minutes=30),
+            id="market_scan",
+            name="Automated Market Scan",
+            replace_existing=True
+        )
+        
+        # Add trade monitor job - every 1 minute
+        scheduler.add_job(
+            background_trade_monitor,
+            trigger=IntervalTrigger(minutes=1),
+            id="trade_monitor",
+            name="Active Trade Monitor",
+            replace_existing=True
+        )
+        
+        # Start scheduler
+        scheduler.start()
+        logging.info("🚀 Background Scheduler started successfully!")
+        logging.info("📊 Market Scan: Every 30 minutes")
+        logging.info("🔍 Trade Monitor: Every 1 minute")
+        
+        # Run initial scan
+        await background_market_scan()
+        
+    except Exception as e:
+        logging.error(f"Scheduler startup error: {str(e)}")
+
 @app.on_event("shutdown")
 async def shutdown_db_client():
+    """Shutdown scheduler and close DB connection"""
+    try:
+        scheduler.shutdown()
+        logging.info("Scheduler stopped")
+    except:
+        pass
     client.close()
