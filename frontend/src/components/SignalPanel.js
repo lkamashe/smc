@@ -1,8 +1,7 @@
 import React from "react";
 import { Badge } from "./ui/badge";
-import { Button } from "./ui/button";
 
-const SignalPanel = ({ currentTrade, onUpdateStatus }) => {
+const SignalPanel = ({ currentTrade }) => {
   if (!currentTrade) {
     return (
       <div className="bg-gray-900/50 backdrop-blur-xl border border-gray-800 rounded-2xl p-6">
@@ -23,7 +22,7 @@ const SignalPanel = ({ currentTrade, onUpdateStatus }) => {
   const getStatusBadge = (status) => {
     const styles = {
       Pending: "bg-blue-500/20 text-blue-400 border-blue-500/50",
-      Active: "bg-green-500/20 text-green-400 border-green-500/50",
+      Active: "bg-green-500/20 text-green-400 border-green-500/50 animate-pulse",
       TP: "bg-emerald-500/20 text-emerald-400 border-emerald-500/50",
       SL: "bg-red-500/20 text-red-400 border-red-500/50",
     };
@@ -32,6 +31,16 @@ const SignalPanel = ({ currentTrade, onUpdateStatus }) => {
 
   const getDirectionColor = (bias) => {
     return bias === "Bullish" ? "text-green-400" : "text-red-400";
+  };
+
+  const getStatusMessage = (status) => {
+    const messages = {
+      Pending: "⏳ Waiting for optimal entry...",
+      Active: "🔥 Trade is running...",
+      TP: "✅ Take Profit Hit!",
+      SL: "❌ Stop Loss Hit"
+    };
+    return messages[status] || "";
   };
 
   return (
@@ -43,6 +52,16 @@ const SignalPanel = ({ currentTrade, onUpdateStatus }) => {
         <Badge data-testid="signal-status-badge" className={`px-3 py-1 text-sm font-semibold border ${getStatusBadge(currentTrade.status)}`}>
           {currentTrade.status}
         </Badge>
+      </div>
+
+      {/* Status Message */}
+      <div className={`text-center py-3 rounded-lg ${
+        currentTrade.status === 'TP' ? 'bg-emerald-500/10 border border-emerald-500/30' :
+        currentTrade.status === 'SL' ? 'bg-red-500/10 border border-red-500/30' :
+        currentTrade.status === 'Active' ? 'bg-green-500/10 border border-green-500/30' :
+        'bg-blue-500/10 border border-blue-500/30'
+      }`}>
+        <p className="text-sm font-semibold">{getStatusMessage(currentTrade.status)}</p>
       </div>
 
       <div className="space-y-4">
@@ -104,39 +123,10 @@ const SignalPanel = ({ currentTrade, onUpdateStatus }) => {
           </div>
         </div>
 
-        {/* Action Buttons */}
-        {currentTrade.status !== "TP" && currentTrade.status !== "SL" && (
-          <div className="space-y-2 pt-4">
-            {currentTrade.status === "Pending" && (
-              <Button
-                data-testid="activate-trade-button"
-                onClick={() => onUpdateStatus(currentTrade.id, "Active")}
-                className="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-3 rounded-lg transition-colors duration-200"
-              >
-                Activate Trade
-              </Button>
-            )}
-            
-            {currentTrade.status === "Active" && (
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  data-testid="hit-tp-button"
-                  onClick={() => onUpdateStatus(currentTrade.id, "TP")}
-                  className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-3 rounded-lg transition-colors duration-200"
-                >
-                  Hit TP
-                </Button>
-                <Button
-                  data-testid="hit-sl-button"
-                  onClick={() => onUpdateStatus(currentTrade.id, "SL")}
-                  className="bg-red-500 hover:bg-red-600 text-white font-semibold py-3 rounded-lg transition-colors duration-200"
-                >
-                  Hit SL
-                </Button>
-              </div>
-            )}
-          </div>
-        )}
+        {/* Auto-update notice */}
+        <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 text-center">
+          <p className="text-xs text-blue-400">🤖 Trade status updates automatically</p>
+        </div>
 
         {/* Timestamp */}
         <div className="text-xs text-gray-500 text-center pt-2">
