@@ -25,7 +25,9 @@ const Dashboard = () => {
 
   const loadCurrentTrade = async () => {
     try {
-      const response = await axios.get(`${API}/trades/current`);
+      const response = await axios.get(`${API}/trades/current`, {
+        params: { symbol: selectedPair }
+      });
       if (response.data) {
         setCurrentTrade(response.data);
         setH4Bias(response.data.bias);
@@ -41,13 +43,15 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
-    // Load current trade immediately
+    // Load current trade immediately when pair changes
     loadCurrentTrade();
     
     // Auto-scan on mount if no trade exists
     const checkAndScan = async () => {
       try {
-        const response = await axios.get(`${API}/trades/current`);
+        const response = await axios.get(`${API}/trades/current`, {
+          params: { symbol: selectedPair }
+        });
         if (!response.data) {
           // No trade exists, auto-scan
           handleScan();
@@ -73,7 +77,7 @@ const Dashboard = () => {
       clearInterval(interval);
       clearInterval(scanInterval);
     };
-  }, []);
+  }, [selectedPair]);
 
   const handleScan = async () => {
     setScanning(true);
