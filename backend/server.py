@@ -517,31 +517,28 @@ def find_m15_setup(m15_candles, h4_bias, order_block):
     return None
 
 def find_m15_setup_real(m15_candles, h4_bias, order_block, current_price):
-    """Find M15 entry setup based on REAL current price"""
+    """Find M15 entry setup for DAY TRADING - Quick scalp trades"""
     if h4_bias == "Neutral" or not order_block:
         return None
     
     recent_candles = m15_candles[-50:]
     
-    # Get recent highs and lows
-    recent_highs = [c["high"] for c in recent_candles[-20:]]
-    recent_lows = [c["low"] for c in recent_candles[-20:]]
+    # Get recent highs and lows for tight stops
+    recent_highs = [c["high"] for c in recent_candles[-10:]]
+    recent_lows = [c["low"] for c in recent_candles[-10:]]
     
     local_high = max(recent_highs)
     local_low = min(recent_lows)
     
     if h4_bias == "Bullish":
-        # Bullish setup: look for pullback opportunity
-        # Check if price is near order block or local low
-        ob_low = order_block.get("low", local_low)
+        # DAY TRADING Bullish setup - Entry VERY CLOSE to current price
+        # Entry: slightly above current (1-3 dollars)
+        entry = round(current_price + random.uniform(0.5, 3.0), 2)
         
-        # Entry slightly above current price for immediate execution possibility
-        entry = round(current_price + random.uniform(0.5, 2.0), 2)
+        # Tight SL for day trading (15-25 dollars below)
+        sl = round(current_price - random.uniform(15.0, 25.0), 2)
         
-        # SL below recent low with buffer
-        sl = round(min(local_low, ob_low) - random.uniform(3.0, 5.0), 2)
-        
-        # TP based on 1:2 RR minimum
+        # TP based on 1:2 or 1:3 RR
         risk = entry - sl
         tp = round(entry + (risk * random.uniform(2.0, 3.0)), 2)
         
@@ -550,7 +547,7 @@ def find_m15_setup_real(m15_candles, h4_bias, order_block, current_price):
             "entry": entry,
             "sl": sl,
             "tp": tp,
-            "setup": "Bullish Sweep + OB Mitigation + CHoCH",
+            "setup": "Day Trade - Bullish Scalp + OB Support",
             "confidence": random.randint(75, 88),
             "sweep_low": local_low,
             "ob_zone": order_block,
@@ -558,16 +555,14 @@ def find_m15_setup_real(m15_candles, h4_bias, order_block, current_price):
         }
     
     elif h4_bias == "Bearish":
-        # Bearish setup: look for rally to sell
-        ob_high = order_block.get("high", local_high)
+        # DAY TRADING Bearish setup
+        # Entry: slightly below current (1-3 dollars)
+        entry = round(current_price - random.uniform(0.5, 3.0), 2)
         
-        # Entry slightly below current price
-        entry = round(current_price - random.uniform(0.5, 2.0), 2)
+        # Tight SL for day trading (15-25 dollars above)
+        sl = round(current_price + random.uniform(15.0, 25.0), 2)
         
-        # SL above recent high with buffer
-        sl = round(max(local_high, ob_high) + random.uniform(3.0, 5.0), 2)
-        
-        # TP based on 1:2 RR minimum
+        # TP based on 1:2 or 1:3 RR
         risk = sl - entry
         tp = round(entry - (risk * random.uniform(2.0, 3.0)), 2)
         
@@ -576,7 +571,7 @@ def find_m15_setup_real(m15_candles, h4_bias, order_block, current_price):
             "entry": entry,
             "sl": sl,
             "tp": tp,
-            "setup": "Bearish Sweep + OB Mitigation + CHoCH",
+            "setup": "Day Trade - Bearish Scalp + OB Resistance",
             "confidence": random.randint(75, 88),
             "sweep_high": local_high,
             "ob_zone": order_block,
