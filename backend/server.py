@@ -824,8 +824,16 @@ def find_m15_setup_real(m15_candles, h4_bias, order_block, current_price):
     return None
 
 # Trading Endpoints
+@api_router.get("/pairs")
+async def get_trading_pairs():
+    """Get list of available trading pairs"""
+    return {
+        "pairs": TRADING_PAIRS,
+        "total": len(TRADING_PAIRS)
+    }
+
 @api_router.get("/analysis/scan")
-async def scan_market():
+async def scan_market(symbol: str = "XAU/USD"):
     """Perform full market analysis using REAL market data"""
     # Check if there's already an active trade today
     today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
