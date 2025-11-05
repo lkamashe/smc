@@ -161,6 +161,11 @@ const Dashboard = () => {
 
       {/* Main Content */}
       <div className="container mx-auto px-4 py-8">
+        {/* Pairs Selector */}
+        <div className="mb-6">
+          <PairsSelector selectedPair={selectedPair} onSelectPair={setSelectedPair} />
+        </div>
+        
         {/* Live Price */}
         <div className="mb-6">
           <LivePrice />
