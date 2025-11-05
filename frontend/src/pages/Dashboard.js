@@ -10,12 +10,14 @@ import History from "../components/History";
 import StatsView from "../components/StatsView";
 import LivePrice from "../components/LivePrice";
 import Footer from "../components/Footer";
+import PairsSelector from "../components/PairsSelector";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 const Dashboard = () => {
   const [scanning, setScanning] = useState(false);
+  const [selectedPair, setSelectedPair] = useState("XAU/USD");
   const [h4Bias, setH4Bias] = useState("Neutral");
   const [currentTrade, setCurrentTrade] = useState(null);
   const [chartData, setChartData] = useState(null);
