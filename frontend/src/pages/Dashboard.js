@@ -82,12 +82,14 @@ const Dashboard = () => {
   const handleScan = async () => {
     setScanning(true);
     try {
-      const response = await axios.get(`${API}/analysis/scan`);
+      const response = await axios.get(`${API}/analysis/scan`, {
+        params: { symbol: selectedPair }
+      });
       
       setH4Bias(response.data.h4_bias);
       
       if (response.data.trade_signal) {
-        toast.success("📊 New Signal Generated!");
+        toast.success(`📊 New Signal for ${selectedPair}!`);
         await loadCurrentTrade();
       } else {
         toast.info(response.data.message);
