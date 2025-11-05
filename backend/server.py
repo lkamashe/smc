@@ -966,10 +966,14 @@ async def scan_market(symbol: str = "XAU/USD"):
     }
 
 @api_router.get("/trades/current")
-async def get_current_trade():
+async def get_current_trade(symbol: str = None):
     """Get current active/pending trade and auto-update status based on REAL price"""
+    query = {"status": {"$in": ["Pending", "Active"]}}
+    if symbol:
+        query["asset"] = symbol
+    
     trade = await db.trades.find_one(
-        {"status": {"$in": ["Pending", "Active"]}},
+        query,
         {"_id": 0},
         sort=[("timestamp", -1)]
     )
