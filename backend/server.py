@@ -1061,6 +1061,16 @@ async def get_current_trade(symbol: str = None):
     
     return trade
 
+@api_router.get("/trades/all-active")
+async def get_all_active_trades():
+    """Get all active trades for all pairs"""
+    trades = await db.trades.find(
+        {"status": {"$in": ["Pending", "Active"]}},
+        {"_id": 0}
+    ).sort("timestamp", -1).to_list(100)
+    
+    return {"trades": trades, "count": len(trades)}
+
 @api_router.get("/trades/history")
 async def get_trade_history():
     """Get all historical trades"""
