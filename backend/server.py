@@ -834,24 +834,36 @@ async def scan_market():
     logging.info(f"Current XAUUSD price: ${current_price}")
     logging.info(f"H4 candles: {len(h4_candles)}, M15 candles: {len(m15_candles)}")
     
-    # Analyze H4 structure with real data
-    h4_analysis = analyze_structure(h4_candles, "H4")
+    # PROFESSIONAL Analysis with strict conditions
+    h4_analysis = analyze_structure_professional(h4_candles, "H4")
     h4_bias = h4_analysis["bias"]
+    quality = h4_analysis.get("quality", 0)
     
-    if h4_bias == "Neutral":
+    logging.info(f"H4 Bias: {h4_bias}, Quality: {quality}%")
+    
+    if h4_bias == "Neutral" or quality < 60:
         return {
-            "h4_bias": "Neutral",
-            "message": "No clear H4 structure - Waiting for better setup",
+            "h4_bias": h4_bias,
+            "message": f"Waiting for high-quality setup (Current quality: {quality}%)",
             "h4_analysis": h4_analysis,
             "trade_signal": None,
             "current_price": current_price
         }
     
-    # Find order block
-    order_block = find_order_block(h4_candles, h4_bias, h4_analysis)
+    # Find professional order block
+    order_block = find_order_block_professional(h4_candles, h4_bias, h4_analysis)
     
-    # Find M15 setup based on CURRENT PRICE
-    m15_setup = find_m15_setup_real(m15_candles, h4_bias, order_block, current_price)
+    if not order_block:
+        return {
+            "h4_bias": h4_bias,
+            "message": "H4 bias confirmed but no valid Order Block found",
+            "h4_analysis": h4_analysis,
+            "trade_signal": None,
+            "current_price": current_price
+        }
+    
+    # Find professional M15 setup
+    m15_setup = find_professional_m5_m15_setup(m15_candles, h4_bias, order_block, current_price)
     
     if not m15_setup:
         return {
