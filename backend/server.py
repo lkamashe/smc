@@ -916,6 +916,7 @@ async def scan_market(symbol: str = "XAU/USD"):
     rr = round(abs(m15_setup["tp"] - m15_setup["entry"]) / abs(m15_setup["entry"] - m15_setup["sl"]), 1)
     
     trade = Trade(
+        asset=symbol,
         bias=h4_bias,
         setup=m15_setup["setup"],
         entry_price=m15_setup["entry"],
@@ -941,8 +942,9 @@ async def scan_market(symbol: str = "XAU/USD"):
     await db.trades.insert_one(trade_dict)
     
     return {
+        "symbol": symbol,
         "h4_bias": h4_bias,
-        "message": "New signal generated from REAL market data!",
+        "message": f"New signal generated for {symbol} from REAL market data!",
         "h4_analysis": h4_analysis,
         "order_block": order_block,
         "m15_setup": m15_setup,
