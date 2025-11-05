@@ -834,23 +834,29 @@ async def get_trading_pairs():
 
 @api_router.get("/analysis/scan")
 async def scan_market(symbol: str = "XAU/USD"):
-    """Perform full market analysis using REAL market data"""
-    # Check if there's already an active trade today
+    """Perform full market analysis using REAL market data for any pair"""
+    # Validate symbol
+    if symbol not in TRADING_PAIRS:
+        raise HTTPException(status_code=400, detail=f"Invalid symbol. Available: {list(TRADING_PAIRS.keys())}")
+    
+    # Check if there's already an active trade today for this symbol
     today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
     existing_trade = await db.trades.find_one({
+        "asset": symbol,
         "timestamp": {"$gte": today_start.isoformat()},
         "status": {"$in": ["Pending", "Active"]}
     })
     
     if existing_trade:
         return {
+            "symbol": symbol,
             "h4_bias": existing_trade.get("bias", "N/A"),
-            "message": "Active trade already exists for today",
+            "message": f"Active trade already exists for {symbol} today",
             "trade_signal": None
         }
     
-    # Get cached or fetch fresh data
-    market_data = get_cached_or_fetch_data()
+    # Get cached or fetch fresh data for this symbol
+    market_data = get_cached_or_fetch_data(symbol)
     h4_candles = market_data["h4_candles"]
     m15_candles = market_data["m15_candles"]
     current_price = market_data["current_price"]
