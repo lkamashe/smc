@@ -252,7 +252,19 @@ market_data_cache = {
 
 CACHE_DURATION_SECONDS = 60  # Cache for 1 minute
 
-def get_cached_or_fetch_data():
+# Available trading pairs
+TRADING_PAIRS = {
+    "XAU/USD": {"name": "Gold", "twelve_data_symbol": "XAU/USD", "category": "Commodities"},
+    "EUR/USD": {"name": "Euro/US Dollar", "twelve_data_symbol": "EUR/USD", "category": "Major"},
+    "GBP/USD": {"name": "British Pound/US Dollar", "twelve_data_symbol": "GBP/USD", "category": "Major"},
+    "USD/JPY": {"name": "US Dollar/Japanese Yen", "twelve_data_symbol": "USD/JPY", "category": "Major"},
+    "USD/CHF": {"name": "US Dollar/Swiss Franc", "twelve_data_symbol": "USD/CHF", "category": "Major"},
+    "AUD/USD": {"name": "Australian Dollar/US Dollar", "twelve_data_symbol": "AUD/USD", "category": "Major"},
+    "USD/CAD": {"name": "US Dollar/Canadian Dollar", "twelve_data_symbol": "USD/CAD", "category": "Major"},
+    "NZD/USD": {"name": "New Zealand Dollar/US Dollar", "twelve_data_symbol": "NZD/USD", "category": "Major"}
+}
+
+def get_cached_or_fetch_data(symbol="XAU/USD"):
     """Get cached market data or fetch new if expired"""
     global market_data_cache
     
