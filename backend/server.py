@@ -197,7 +197,7 @@ async def background_trade_monitor():
 class Trade(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    asset: str = "XAUUSD"
+    asset: str = "XAUUSD"  # Trading pair symbol
     bias: str  # Bullish/Bearish
     setup: str
     entry_price: float
