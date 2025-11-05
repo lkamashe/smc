@@ -268,27 +268,38 @@ def get_cached_or_fetch_data(symbol="XAU/USD"):
     """Get cached market data or fetch new if expired"""
     global market_data_cache
     
+    cache_key = symbol
+    
+    # Initialize cache for this symbol if not exists
+    if cache_key not in market_data_cache:
+        market_data_cache[cache_key] = {
+            "h4_data": None,
+            "m15_data": None,
+            "current_price": None,
+            "last_update": None
+        }
+    
     now = datetime.now(timezone.utc)
     
     # Check if cache is still valid
-    if market_data_cache["last_update"]:
-        elapsed = (now - market_data_cache["last_update"]).total_seconds()
+    if market_data_cache[cache_key]["last_update"]:
+        elapsed = (now - market_data_cache[cache_key]["last_update"]).total_seconds()
         if elapsed < CACHE_DURATION_SECONDS:
-            logging.info("Using cached market data")
+            logging.info(f"Using cached market data for {symbol}")
             return {
-                "h4_candles": market_data_cache["h4_data"],
-                "m15_candles": market_data_cache["m15_data"],
-                "current_price": market_data_cache["current_price"]
+                "h4_candles": market_data_cache[cache_key]["h4_data"],
+                "m15_candles": market_data_cache[cache_key]["m15_data"],
+                "current_price": market_data_cache[cache_key]["current_price"]
             }
     
     # Fetch fresh data
-    logging.info("Fetching fresh market data from Twelve Data...")
-    h4_data = fetch_real_market_data("XAU/USD", "4h", 100)
-    m15_data = fetch_real_market_data("XAU/USD", "15min", 200)
-    current_price = get_current_price("XAU/USD")
+    logging.info(f"Fetching fresh market data for {symbol} from Twelve Data...")
+    h4_data = fetch_real_market_data(symbol, "4h", 100)
+    m15_data = fetch_real_market_data(symbol, "15min", 200)
+    current_price = get_current_price(symbol)
     
     # Update cache
-    market_data_cache = {
+    market_data_cache[cache_key] = {
         "h4_data": h4_data,
         "m15_data": m15_data,
         "current_price": current_price,
