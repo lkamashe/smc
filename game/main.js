@@ -1,23 +1,45 @@
 // إعدادات قابلة للتعديل لضبط إحساس الجزيرة
-const ISLAND_RADIUS = 22;   // نصف قطر اليابسة؛ كبّره لتطويل وقت المشي من طرف لطرف
+const ISLAND_RADIUS = 30;   // نصف قطر اليابسة؛ كبّره لتطويل وقت المشي من طرف لطرف
 const PLAYER_SPEED = 5;     // وحدات بالثانية
 const PROXIMITY = 4;        // مسافة التفاعل مع نقاط الاهتمام (الحيط، الصيد، النار)
 const CAMERA_HEIGHT = 6;    // ارتفاع الكاميرا فوق اللاعب
 const CAMERA_BACK = 9;      // بعد الكاميرا وراء اللاعب
 
-const HOUSE_CENTER = { x: 6, z: -6 };
-const WALL_LENGTH = 6;
-const WALL_HEIGHT = 2.2;
+const HOUSE_CENTER = { x: 8, z: -8 };
+const HOUSE_WIDTH = 9;      // طول الحيط الشمالي/الجنوبي (محور X)
+const HOUSE_DEPTH = 7;      // طول الحيط الشرقي/الغربي (محور Z)
+const WALL_HEIGHT = 2.4;
 const WALL_THICKNESS = 0.3;
-const WALL_SPECS = [
-  { id: 'north', x: HOUSE_CENTER.x, z: HOUSE_CENTER.z - WALL_LENGTH / 2, rotY: 0 },
-  { id: 'south', x: HOUSE_CENTER.x, z: HOUSE_CENTER.z + WALL_LENGTH / 2, rotY: 0 },
-  { id: 'east', x: HOUSE_CENTER.x + WALL_LENGTH / 2, z: HOUSE_CENTER.z, rotY: Math.PI / 2 },
-  { id: 'west', x: HOUSE_CENTER.x - WALL_LENGTH / 2, z: HOUSE_CENTER.z, rotY: Math.PI / 2 },
+const DOOR_WIDTH = 1.6;
+
+const WALL_META = {
+  north: { z: HOUSE_CENTER.z - HOUSE_DEPTH / 2 },
+  south: { z: HOUSE_CENTER.z + HOUSE_DEPTH / 2 },
+  east: { x: HOUSE_CENTER.x + HOUSE_WIDTH / 2 },
+  west: { x: HOUSE_CENTER.x - HOUSE_WIDTH / 2 },
+};
+
+const SOUTH_SEG_LEN = (HOUSE_WIDTH - DOOR_WIDTH) / 2;
+
+// الحيط الجنوبي مبني من قطعتين وبينهن فتحة الباب؛ باقي الحيطان قطعة وحدة
+const WALL_PANELS = [
+  { id: 'north', x: HOUSE_CENTER.x, z: WALL_META.north.z, length: HOUSE_WIDTH, rotY: 0 },
+  { id: 'south', x: HOUSE_CENTER.x - DOOR_WIDTH / 2 - SOUTH_SEG_LEN / 2, z: WALL_META.south.z, length: SOUTH_SEG_LEN, rotY: 0 },
+  { id: 'south', x: HOUSE_CENTER.x + DOOR_WIDTH / 2 + SOUTH_SEG_LEN / 2, z: WALL_META.south.z, length: SOUTH_SEG_LEN, rotY: 0 },
+  { id: 'east', x: WALL_META.east.x, z: HOUSE_CENTER.z, length: HOUSE_DEPTH, rotY: Math.PI / 2 },
+  { id: 'west', x: WALL_META.west.x, z: HOUSE_CENTER.z, length: HOUSE_DEPTH, rotY: Math.PI / 2 },
 ];
 
-const FISH_POS = { x: 0, z: ISLAND_RADIUS - 4 };
-const FIRE_POS = { x: -6, z: -6 };
+const WALL_IDS = ['north', 'south', 'east', 'west'];
+const WALL_TARGET = {
+  north: { x: HOUSE_CENTER.x, z: WALL_META.north.z },
+  south: { x: HOUSE_CENTER.x, z: WALL_META.south.z },
+  east: { x: WALL_META.east.x, z: HOUSE_CENTER.z },
+  west: { x: WALL_META.west.x, z: HOUSE_CENTER.z },
+};
+
+const FISH_POS = { x: 0, z: ISLAND_RADIUS - 5 };
+const FIRE_POS = { x: HOUSE_CENTER.x - 11, z: HOUSE_CENTER.z };
 
 const params = new URLSearchParams(location.search);
 let islandId = params.get('island');
@@ -49,7 +71,7 @@ let localGroup;
 const wallGhosts = {};
 const wallSolids = {};
 let fireUnlit, fireFlame;
-let houseDoor, houseWindowL, houseWindowR, houseRoof;
+let houseDoorFrame, houseWindowL, houseWindowR, houseRoof, furnitureGroup;
 let waterMap;
 const remoteGroups = {};
 const placedFishMeshes = {};
@@ -94,7 +116,7 @@ function makeSandTexture() {
   }
   const tex = new THREE.CanvasTexture(c);
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-  tex.repeat.set(7, 7);
+  tex.repeat.set(9, 9);
   return tex;
 }
 
@@ -120,29 +142,38 @@ function makeWaterTexture() {
   }
   const tex = new THREE.CanvasTexture(c);
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-  tex.repeat.set(10, 10);
+  tex.repeat.set(12, 12);
   return tex;
 }
 
-function makeWoodTexture() {
+function makePlankTexture(base) {
   const c = document.createElement('canvas');
   c.width = 128;
   c.height = 128;
   const ctx = c.getContext('2d');
-  ctx.fillStyle = '#8a5a34';
+  ctx.fillStyle = base;
   ctx.fillRect(0, 0, 128, 128);
-  for (let i = 0; i < 14; i++) {
-    ctx.strokeStyle = `rgba(60, 35, 15, ${0.15 + Math.random() * 0.2})`;
-    ctx.lineWidth = 1 + Math.random();
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.14)';
+  ctx.lineWidth = 1.5;
+  for (let i = 1; i < 8; i++) {
+    const x = i * 16;
     ctx.beginPath();
-    const y = i * 9 + Math.random() * 4;
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, 128);
+    ctx.stroke();
+  }
+  for (let i = 0; i < 20; i++) {
+    ctx.strokeStyle = `rgba(70, 45, 20, ${0.1 + Math.random() * 0.18})`;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    const y = Math.random() * 128;
     ctx.moveTo(0, y);
-    ctx.bezierCurveTo(32, y + 6, 96, y - 6, 128, y);
+    ctx.lineTo(128, y + Math.random() * 8 - 4);
     ctx.stroke();
   }
   const tex = new THREE.CanvasTexture(c);
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-  tex.repeat.set(2, 1);
+  tex.repeat.set(3, 2);
   return tex;
 }
 
@@ -292,17 +323,91 @@ function buildFish() {
 function buildRoof() {
   const group = new THREE.Group();
   const roofMat = new THREE.MeshStandardMaterial({ color: 0x7a3b2e, roughness: 0.8 });
-  const panelGeo = new THREE.BoxGeometry(WALL_LENGTH + 0.7, 0.15, WALL_LENGTH / 2 + 0.6);
+  const panelGeo = new THREE.BoxGeometry(HOUSE_WIDTH + 0.8, 0.15, HOUSE_DEPTH / 2 + 0.7);
 
   const left = new THREE.Mesh(panelGeo, roofMat);
-  left.position.set(HOUSE_CENTER.x, WALL_HEIGHT + 0.85, HOUSE_CENTER.z - WALL_LENGTH / 4 + 0.15);
-  left.rotation.x = -0.5;
+  left.position.set(HOUSE_CENTER.x, WALL_HEIGHT + 0.95, HOUSE_CENTER.z - HOUSE_DEPTH / 4 + 0.15);
+  left.rotation.x = -0.45;
 
   const right = new THREE.Mesh(panelGeo, roofMat);
-  right.position.set(HOUSE_CENTER.x, WALL_HEIGHT + 0.85, HOUSE_CENTER.z + WALL_LENGTH / 4 - 0.15);
-  right.rotation.x = 0.5;
+  right.position.set(HOUSE_CENTER.x, WALL_HEIGHT + 0.95, HOUSE_CENTER.z + HOUSE_DEPTH / 4 - 0.15);
+  right.rotation.x = 0.45;
 
   group.add(left, right);
+  group.visible = false;
+  return enableShadows(group);
+}
+
+function buildTable() {
+  const group = new THREE.Group();
+  const woodMat = new THREE.MeshStandardMaterial({ map: makePlankTexture('#9a6a3d'), roughness: 0.8 });
+  const top = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.1, 0.9), woodMat);
+  top.position.y = 0.75;
+  group.add(top);
+  const legGeo = new THREE.BoxGeometry(0.1, 0.75, 0.1);
+  [[-0.7, -0.35], [0.7, -0.35], [-0.7, 0.35], [0.7, 0.35]].forEach(([x, z]) => {
+    const leg = new THREE.Mesh(legGeo, woodMat);
+    leg.position.set(x, 0.375, z);
+    group.add(leg);
+  });
+  return enableShadows(group);
+}
+
+function buildChair() {
+  const group = new THREE.Group();
+  const woodMat = new THREE.MeshStandardMaterial({ color: 0x8a5a34, roughness: 0.8 });
+  const seat = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.08, 0.45), woodMat);
+  seat.position.y = 0.45;
+  const back = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.5, 0.08), woodMat);
+  back.position.set(0, 0.7, -0.2);
+  group.add(seat, back);
+  const legGeo = new THREE.BoxGeometry(0.06, 0.45, 0.06);
+  [[-0.18, -0.18], [0.18, -0.18], [-0.18, 0.18], [0.18, 0.18]].forEach(([x, z]) => {
+    const leg = new THREE.Mesh(legGeo, woodMat);
+    leg.position.set(x, 0.225, z);
+    group.add(leg);
+  });
+  return enableShadows(group);
+}
+
+function buildStove() {
+  const group = new THREE.Group();
+  const base = new THREE.Mesh(
+    new THREE.BoxGeometry(0.8, 0.5, 0.5),
+    new THREE.MeshStandardMaterial({ color: 0x555555, roughness: 0.6, metalness: 0.4 })
+  );
+  base.position.y = 0.25;
+  const pot = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.22, 0.2, 0.22, 12),
+    new THREE.MeshStandardMaterial({ color: 0x2a2a2a, roughness: 0.5, metalness: 0.5 })
+  );
+  pot.position.y = 0.6;
+  group.add(base, pot);
+  return enableShadows(group);
+}
+
+function buildFurniture() {
+  const group = new THREE.Group();
+
+  const table = buildTable();
+  table.position.set(0, 0, -1);
+  group.add(table);
+
+  const chair1 = buildChair();
+  chair1.position.set(-1.1, 0, -0.1);
+  chair1.rotation.y = Math.PI;
+  group.add(chair1);
+
+  const chair2 = buildChair();
+  chair2.position.set(1.1, 0, -0.1);
+  chair2.rotation.y = Math.PI;
+  group.add(chair2);
+
+  const stove = buildStove();
+  stove.position.set(-3.2, 0, -2.4);
+  group.add(stove);
+
+  group.position.set(HOUSE_CENTER.x, 0, HOUSE_CENTER.z);
   group.visible = false;
   return enableShadows(group);
 }
@@ -310,9 +415,9 @@ function buildRoof() {
 function initScene() {
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0xbfe6ff);
-  scene.fog = new THREE.Fog(0xbfe6ff, 45, 150);
+  scene.fog = new THREE.Fog(0xbfe6ff, 55, 190);
 
-  camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 500);
+  camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 600);
 
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(innerWidth, innerHeight);
@@ -321,18 +426,19 @@ function initScene() {
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   document.body.appendChild(renderer.domElement);
 
-  const ambient = new THREE.AmbientLight(0xffffff, 0.6);
+  const ambient = new THREE.AmbientLight(0xffffff, 0.5);
+  const hemi = new THREE.HemisphereLight(0xbfe6ff, 0xe4d19a, 0.45);
   const sun = new THREE.DirectionalLight(0xfff3d6, 1.0);
-  sun.position.set(24, 32, 14);
+  sun.position.set(28, 36, 16);
   sun.castShadow = true;
   sun.shadow.mapSize.set(1024, 1024);
-  sun.shadow.camera.left = -26;
-  sun.shadow.camera.right = 26;
-  sun.shadow.camera.top = 26;
-  sun.shadow.camera.bottom = -26;
+  sun.shadow.camera.left = -30;
+  sun.shadow.camera.right = 30;
+  sun.shadow.camera.top = 30;
+  sun.shadow.camera.bottom = -30;
   sun.shadow.camera.near = 1;
-  sun.shadow.camera.far = 80;
-  scene.add(ambient, sun);
+  sun.shadow.camera.far = 90;
+  scene.add(ambient, hemi, sun);
 
   waterMap = makeWaterTexture();
   const water = new THREE.Mesh(
@@ -345,47 +451,57 @@ function initScene() {
   scene.add(water);
 
   const island = new THREE.Mesh(
-    new THREE.CylinderGeometry(ISLAND_RADIUS, ISLAND_RADIUS * 1.08, 2, 24),
+    new THREE.CylinderGeometry(ISLAND_RADIUS, ISLAND_RADIUS * 1.08, 2, 28),
     new THREE.MeshStandardMaterial({ map: makeSandTexture(), roughness: 0.95 })
   );
   island.position.y = -1;
   island.receiveShadow = true;
   scene.add(island);
 
-  for (let i = 0; i < 12; i++) {
-    const angle = (i / 12) * Math.PI * 2;
-    const r = ISLAND_RADIUS * (0.55 + Math.random() * 0.3);
+  for (let i = 0; i < 14; i++) {
+    const angle = (i / 14) * Math.PI * 2;
+    const r = ISLAND_RADIUS * (0.55 + Math.random() * 0.32);
     scene.add(buildTree(Math.cos(angle) * r, Math.sin(angle) * r));
   }
 
-  const wallGeo = new THREE.BoxGeometry(WALL_LENGTH, WALL_HEIGHT, WALL_THICKNESS);
   const ghostMat = new THREE.MeshStandardMaterial({ color: 0x8bd67a, transparent: true, opacity: 0.4 });
-  const solidMat = new THREE.MeshStandardMaterial({ map: makeWoodTexture(), roughness: 0.85 });
-  WALL_SPECS.forEach((w) => {
-    const ghost = new THREE.Mesh(wallGeo, ghostMat);
-    ghost.position.set(w.x, WALL_HEIGHT / 2, w.z);
-    ghost.rotation.y = w.rotY;
-    scene.add(ghost);
-    wallGhosts[w.id] = ghost;
+  const solidMat = new THREE.MeshStandardMaterial({ map: makePlankTexture('#8a5a34'), roughness: 0.85 });
+  WALL_PANELS.forEach((p) => {
+    const geo = new THREE.BoxGeometry(p.length, WALL_HEIGHT, WALL_THICKNESS);
 
-    const solid = new THREE.Mesh(wallGeo, solidMat);
-    solid.position.set(w.x, WALL_HEIGHT / 2, w.z);
-    solid.rotation.y = w.rotY;
+    const ghost = new THREE.Mesh(geo, ghostMat);
+    ghost.position.set(p.x, WALL_HEIGHT / 2, p.z);
+    ghost.rotation.y = p.rotY;
+    scene.add(ghost);
+    (wallGhosts[p.id] = wallGhosts[p.id] || []).push(ghost);
+
+    const solid = new THREE.Mesh(geo, solidMat);
+    solid.position.set(p.x, WALL_HEIGHT / 2, p.z);
+    solid.rotation.y = p.rotY;
     solid.visible = false;
     solid.castShadow = true;
     solid.receiveShadow = true;
     scene.add(solid);
-    wallSolids[w.id] = solid;
+    (wallSolids[p.id] = wallSolids[p.id] || []).push(solid);
   });
 
-  houseDoor = new THREE.Mesh(
-    new THREE.BoxGeometry(1.1, 1.7, 0.08),
+  const floor = new THREE.Mesh(
+    new THREE.PlaneGeometry(HOUSE_WIDTH - WALL_THICKNESS, HOUSE_DEPTH - WALL_THICKNESS),
+    new THREE.MeshStandardMaterial({ map: makePlankTexture('#c8975a'), roughness: 0.8 })
+  );
+  floor.rotation.x = -Math.PI / 2;
+  floor.position.set(HOUSE_CENTER.x, 0.01, HOUSE_CENTER.z);
+  floor.receiveShadow = true;
+  scene.add(floor);
+
+  houseDoorFrame = new THREE.Mesh(
+    new THREE.BoxGeometry(DOOR_WIDTH + 0.3, 0.25, WALL_THICKNESS + 0.05),
     new THREE.MeshStandardMaterial({ color: 0x4a3423, roughness: 0.7 })
   );
-  houseDoor.position.set(HOUSE_CENTER.x, 0.85, HOUSE_CENTER.z + WALL_LENGTH / 2 + 0.05);
-  houseDoor.visible = false;
-  houseDoor.castShadow = true;
-  scene.add(houseDoor);
+  houseDoorFrame.position.set(HOUSE_CENTER.x, WALL_HEIGHT - 0.1, WALL_META.south.z);
+  houseDoorFrame.visible = false;
+  houseDoorFrame.castShadow = true;
+  scene.add(houseDoorFrame);
 
   const windowMat = new THREE.MeshStandardMaterial({
     color: 0xbfe6ff,
@@ -396,14 +512,17 @@ function initScene() {
   });
   const windowGeo = new THREE.PlaneGeometry(0.8, 0.8);
   houseWindowL = new THREE.Mesh(windowGeo, windowMat);
-  houseWindowL.position.set(HOUSE_CENTER.x - 1.5, 1.3, HOUSE_CENTER.z - WALL_LENGTH / 2 - 0.03);
+  houseWindowL.position.set(HOUSE_CENTER.x - HOUSE_WIDTH / 2 + 1.6, 1.3, WALL_META.north.z - 0.03);
   houseWindowR = new THREE.Mesh(windowGeo, windowMat);
-  houseWindowR.position.set(HOUSE_CENTER.x + 1.5, 1.3, HOUSE_CENTER.z - WALL_LENGTH / 2 - 0.03);
+  houseWindowR.position.set(HOUSE_CENTER.x + HOUSE_WIDTH / 2 - 1.6, 1.3, WALL_META.north.z - 0.03);
   houseWindowL.visible = houseWindowR.visible = false;
   scene.add(houseWindowL, houseWindowR);
 
   houseRoof = buildRoof();
   scene.add(houseRoof);
+
+  furnitureGroup = buildFurniture();
+  scene.add(furnitureGroup);
 
   const fishMarker = new THREE.Mesh(
     new THREE.CylinderGeometry(0.6, 0.6, 0.15, 12),
@@ -472,15 +591,17 @@ function initScene() {
   houseRef.on('value', (snap) => {
     houseState = snap.val() || {};
     const walls = houseState.walls || {};
-    WALL_SPECS.forEach((w) => {
-      const built = !!walls[w.id];
-      wallGhosts[w.id].visible = !built;
-      wallSolids[w.id].visible = built;
+    WALL_IDS.forEach((id) => {
+      const built = !!walls[id];
+      wallGhosts[id].forEach((m) => (m.visible = !built));
+      wallSolids[id].forEach((m) => (m.visible = built));
     });
-    houseDoor.visible = !!walls.south;
+    houseDoorFrame.visible = !!walls.south;
     houseWindowL.visible = !!walls.north;
     houseWindowR.visible = !!walls.north;
-    houseRoof.visible = WALL_SPECS.every((w) => walls[w.id]);
+    const complete = WALL_IDS.every((id) => walls[id]);
+    houseRoof.visible = complete;
+    furnitureGroup.visible = complete;
   });
 
   campfireRef.on('value', (snap) => {
@@ -548,22 +669,23 @@ function dist2D(x1, z1, x2, z2) {
 
 function nearestUnbuiltWall() {
   const walls = houseState.walls || {};
-  let best = null;
+  let bestId = null;
   let bestDist = Infinity;
-  WALL_SPECS.forEach((w) => {
-    if (walls[w.id]) return;
-    const d = dist2D(localPos.x, localPos.z, w.x, w.z);
+  WALL_IDS.forEach((id) => {
+    if (walls[id]) return;
+    const t = WALL_TARGET[id];
+    const d = dist2D(localPos.x, localPos.z, t.x, t.z);
     if (d < bestDist) {
       bestDist = d;
-      best = w;
+      bestId = id;
     }
   });
-  return best ? { wall: best, dist: bestDist } : null;
+  return bestId ? { id: bestId, dist: bestDist } : null;
 }
 
 function houseComplete() {
   const walls = houseState.walls || {};
-  return WALL_SPECS.every((w) => walls[w.id]);
+  return WALL_IDS.every((id) => walls[id]);
 }
 
 function updateActionButton() {
@@ -576,7 +698,7 @@ function updateActionButton() {
   if (myHolding === 'wood' && nearestWall && nearestWall.dist < PROXIMITY) {
     btn.textContent = 'ابني الحيط 🧱';
     btn.classList.remove('hidden');
-    btn.onclick = () => buildWall(nearestWall.wall.id);
+    btn.onclick = () => buildWall(nearestWall.id);
   } else if (carryingFish) {
     btn.textContent = 'حط السمكة هون 🐟';
     btn.classList.remove('hidden');
