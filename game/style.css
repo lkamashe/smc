@@ -13,7 +13,7 @@ html, body {
   height: 100%;
   overflow: hidden;
   background: #bfe6ff;
-  font-family: Tahoma, Arial, sans-serif;
+  font-family: Tahoma, 'Segoe UI', Arial, sans-serif;
 }
 
 canvas {
@@ -27,42 +27,54 @@ canvas {
 .modal {
   position: fixed;
   inset: 0;
-  background: rgba(10, 20, 30, 0.6);
+  background: linear-gradient(160deg, rgba(10, 25, 40, 0.75), rgba(20, 40, 60, 0.55));
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 50;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
 }
 
 .modal-box {
-  background: #fffdf6;
-  border-radius: 16px;
-  padding: 28px 24px;
+  background: rgba(255, 253, 246, 0.97);
+  border-radius: 22px;
+  padding: 32px 26px;
   text-align: center;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.6);
 }
 
 .modal-box h2 {
-  margin: 0 0 18px;
-  font-size: 20px;
+  margin: 0 0 22px;
+  font-size: 21px;
   color: #2b3a4a;
+  font-weight: 700;
 }
 
 .role-btn {
   display: block;
-  width: 220px;
+  width: 230px;
   margin: 10px auto;
-  padding: 14px 10px;
+  padding: 15px 10px;
   font-size: 17px;
+  font-weight: 600;
   border: none;
-  border-radius: 12px;
-  background: #4a90c4;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #5aa8e0, #3d7fc4);
   color: white;
   cursor: pointer;
+  box-shadow: 0 6px 16px rgba(74, 144, 196, 0.4);
+  transition: transform 0.12s ease;
+}
+
+.role-btn:active {
+  transform: scale(0.96);
 }
 
 .role-btn:last-child {
-  background: #c9528f;
+  background: linear-gradient(135deg, #e07bb0, #c9528f);
+  box-shadow: 0 6px 16px rgba(201, 82, 143, 0.4);
 }
 
 #hud {
@@ -75,45 +87,61 @@ canvas {
 }
 
 .hud-btn {
-  padding: 10px 14px;
+  padding: 11px 16px;
   border: none;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.85);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   font-size: 14px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  font-weight: 600;
+  color: #2b3a4a;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.5);
   cursor: pointer;
+  transition: transform 0.12s ease;
+}
+
+.hud-btn:active {
+  transform: scale(0.95);
 }
 
 #hint {
   position: fixed;
-  top: 62px;
+  top: 64px;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(20, 30, 40, 0.75);
-  color: white;
-  padding: 8px 16px;
-  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(30, 45, 60, 0.85), rgba(15, 25, 35, 0.85));
+  color: #fff;
+  padding: 9px 18px;
+  border-radius: 22px;
   font-size: 13px;
+  font-weight: 500;
   z-index: 18;
   white-space: nowrap;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
 }
 
 .panel {
   position: fixed;
-  top: 70px;
+  top: 72px;
   inset-inline-start: 14px;
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 14px;
-  padding: 16px;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 18px;
+  padding: 18px;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.25);
   z-index: 30;
-  min-width: 220px;
+  min-width: 230px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
 }
 
 .panel h3 {
-  margin: 0 0 12px;
+  margin: 0 0 14px;
   font-size: 16px;
   color: #2b3a4a;
+  font-weight: 700;
 }
 
 .inv-row {
@@ -121,93 +149,115 @@ canvas {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
   font-size: 14px;
+  background: rgba(240, 244, 248, 0.7);
+  padding: 8px 10px;
+  border-radius: 12px;
 }
 
 .inv-row button {
-  padding: 8px 10px;
+  padding: 8px 14px;
   border: none;
-  border-radius: 8px;
-  background: #4a90c4;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #5aa8e0, #3d7fc4);
   color: white;
+  font-weight: 600;
   cursor: pointer;
+  box-shadow: 0 3px 8px rgba(74, 144, 196, 0.35);
 }
 
 .close-btn {
   width: 100%;
-  padding: 8px;
+  padding: 9px;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   background: #e2e6ea;
+  font-weight: 600;
+  color: #555;
   cursor: pointer;
 }
 
-#holding-badge {
+#holding-badge,
+#fish-badge {
   position: fixed;
   top: 14px;
   inset-inline-end: 14px;
-  background: rgba(255, 255, 255, 0.9);
-  padding: 8px 14px;
-  border-radius: 10px;
-  font-size: 14px;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  padding: 9px 16px;
+  border-radius: 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #2b3a4a;
   z-index: 20;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
 }
 
 #fish-badge {
-  position: fixed;
-  top: 58px;
-  inset-inline-end: 14px;
-  background: rgba(191, 216, 233, 0.95);
-  padding: 8px 14px;
-  border-radius: 10px;
-  font-size: 14px;
-  z-index: 20;
+  top: 60px;
+  background: rgba(255, 214, 168, 0.92);
 }
 
 #action-btn {
   position: fixed;
-  bottom: 130px;
+  bottom: 132px;
   left: 50%;
   transform: translateX(-50%);
-  padding: 14px 22px;
+  padding: 15px 26px;
   font-size: 15px;
+  font-weight: 700;
   border: none;
   border-radius: 30px;
-  background: #f2a541;
+  background: linear-gradient(135deg, #ffb454, #f2914a);
   color: #3a2200;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.35);
   z-index: 20;
   cursor: pointer;
   touch-action: none;
+  transition: transform 0.12s ease;
+}
+
+#action-btn:active {
+  transform: translateX(-50%) scale(0.95);
 }
 
 #dpad {
   position: fixed;
-  bottom: 20px;
-  inset-inline-end: 20px;
+  bottom: 22px;
+  inset-inline-end: 22px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
   z-index: 20;
 }
 
 .dpad-mid {
   display: flex;
-  gap: 6px;
+  gap: 7px;
 }
 
 .dpad-btn {
-  width: 56px;
-  height: 56px;
-  border-radius: 14px;
+  width: 58px;
+  height: 58px;
+  border-radius: 16px;
   border: none;
-  background: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   font-size: 20px;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+  color: #2b3a4a;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
   cursor: pointer;
   touch-action: none;
+  transition: transform 0.1s ease, background 0.1s ease;
+}
+
+.dpad-btn:active {
+  transform: scale(0.9);
+  background: rgba(255, 255, 255, 0.95);
 }
 
 .hud-btn,
@@ -220,10 +270,10 @@ canvas {
 
 @media (max-width: 480px) {
   .dpad-btn {
-    width: 50px;
-    height: 50px;
+    width: 52px;
+    height: 52px;
   }
   .panel {
-    min-width: 180px;
+    min-width: 190px;
   }
 }
