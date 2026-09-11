@@ -1,6 +1,8 @@
 * {
   box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
   user-select: none;
 }
 
@@ -166,6 +168,7 @@ canvas {
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
   z-index: 20;
   cursor: pointer;
+  touch-action: none;
 }
 
 #dpad {
@@ -193,6 +196,15 @@ canvas {
   font-size: 20px;
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
   cursor: pointer;
+  touch-action: none;
+}
+
+.hud-btn,
+.role-btn,
+#take-wood-btn,
+#take-rod-btn,
+#close-inventory-btn {
+  touch-action: manipulation;
 }
 
 @media (max-width: 480px) {
