@@ -42,6 +42,7 @@ const myPlayerRef = playersRef.child(playerId);
 const inventoryRef = islandRef.child('sharedInventory');
 const houseRef = islandRef.child('house');
 const campfireRef = islandRef.child('campfire');
+const placedFishRef = islandRef.child('placedFish');
 
 let scene, camera, renderer;
 let localGroup;
@@ -49,9 +50,11 @@ const wallGhosts = {};
 const wallSolids = {};
 let fireUnlit, fireFlame;
 const remoteGroups = {};
+const placedFishMeshes = {};
 
 const localPos = { x: 0, z: 0 };
 let myHolding = null;
+let carryingFish = false;
 let houseState = {};
 let campfireState = { fish: 0, lit: false };
 
@@ -129,6 +132,19 @@ function buildTree(x, z) {
   leaves.position.y = 2.1;
   group.add(trunk, leaves);
   group.position.set(x, 0, z);
+  return group;
+}
+
+function buildFish() {
+  const group = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({ color: 0x8fb8d9 });
+  const body = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.5, 6), mat);
+  body.rotation.z = Math.PI / 2;
+  group.add(body);
+  const tail = new THREE.Mesh(new THREE.ConeGeometry(0.14, 0.22, 4), mat);
+  tail.rotation.z = -Math.PI / 2;
+  tail.position.x = -0.32;
+  group.add(tail);
   return group;
 }
 
@@ -230,6 +246,21 @@ function initScene() {
     updateHoldingBadge();
   });
 
+  myPlayerRef.child('carryingFish').on('value', (snap) => {
+    carryingFish = !!snap.val();
+    updateFishBadge();
+  });
+
+  placedFishRef.on('child_added', (snap) => {
+    const data = snap.val();
+    if (!data) return;
+    const fish = buildFish();
+    fish.position.set(data.x, 0.15, data.z);
+    fish.rotation.y = data.rotY ?? 0;
+    scene.add(fish);
+    placedFishMeshes[snap.key] = fish;
+  });
+
   inventoryRef.transaction((cur) => cur || { wood: 10, rods: 2 });
   inventoryRef.on('value', (snap) => updateInventoryUI(snap.val() || {}));
 
@@ -292,6 +323,16 @@ function updateHoldingBadge() {
   }
 }
 
+function updateFishBadge() {
+  const badge = document.getElementById('fish-badge');
+  if (carryingFish) {
+    badge.textContent = '🐟 ماسك سمكة - حطها بمكان حلو!';
+    badge.classList.remove('hidden');
+  } else {
+    badge.classList.add('hidden');
+  }
+}
+
 function dist2D(x1, z1, x2, z2) {
   return Math.hypot(x1 - x2, z1 - z2);
 }
@@ -327,6 +368,10 @@ function updateActionButton() {
     btn.textContent = 'ابني الحيط 🧱';
     btn.classList.remove('hidden');
     btn.onclick = () => buildWall(nearestWall.wall.id);
+  } else if (carryingFish) {
+    btn.textContent = 'حط السمكة هون 🐟';
+    btn.classList.remove('hidden');
+    btn.onclick = placeFish;
   } else if (myHolding === 'rod' && nearFish) {
     btn.textContent = 'اصطد سمكة 🎣';
     btn.classList.remove('hidden');
@@ -349,6 +394,8 @@ function updateHint() {
     if (nearest && nearest.dist >= PROXIMITY) {
       text = `🧱 امشِ نحو الحيط (${Math.round(nearest.dist)} م)`;
     }
+  } else if (carryingFish) {
+    text = '';
   } else if (myHolding === 'rod') {
     if ((campfireState.fish || 0) > 0 && !campfireState.lit) {
       const d = Math.round(dist2D(localPos.x, localPos.z, FIRE_POS.x, FIRE_POS.z));
@@ -372,6 +419,12 @@ function buildWall(id) {
 
 function catchFish() {
   campfireRef.child('fish').transaction((v) => (v || 0) + 1);
+  myPlayerRef.child('carryingFish').set(true);
+}
+
+function placeFish() {
+  placedFishRef.push({ x: localPos.x, z: localPos.z, rotY: Math.random() * Math.PI * 2 });
+  myPlayerRef.child('carryingFish').set(false);
 }
 
 function lightFire() {
