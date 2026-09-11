@@ -1,11 +1,13 @@
 // إعدادات قابلة للتعديل لضبط إحساس الجزيرة
-const ISLAND_RADIUS = 45;   // نصف قطر اليابسة؛ كبّره لتطويل وقت المشي من طرف لطرف
+const ISLAND_RADIUS = 22;   // نصف قطر اليابسة؛ كبّره لتطويل وقت المشي من طرف لطرف
 const PLAYER_SPEED = 5;     // وحدات بالثانية
-const PROXIMITY = 3.5;      // مسافة التفاعل مع نقاط الاهتمام (الحيط، الصيد، النار)
+const PROXIMITY = 4;        // مسافة التفاعل مع نقاط الاهتمام (الحيط، الصيد، النار)
+const CAMERA_HEIGHT = 6;    // ارتفاع الكاميرا فوق اللاعب
+const CAMERA_BACK = 9;      // بعد الكاميرا وراء اللاعب
 
-const WALL_POS = { x: 9, z: -10 };
-const FISH_POS = { x: 0, z: ISLAND_RADIUS - 6 };
-const FIRE_POS = { x: -9, z: -10 };
+const WALL_POS = { x: 6, z: -6 };
+const FISH_POS = { x: 0, z: ISLAND_RADIUS - 4 };
+const FIRE_POS = { x: -6, z: -6 };
 
 const params = new URLSearchParams(location.search);
 let islandId = params.get('island');
@@ -122,7 +124,7 @@ function initScene() {
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0xbfe6ff);
 
-  camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.1, 500);
+  camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 500);
 
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(innerWidth, innerHeight);
@@ -187,8 +189,8 @@ function initScene() {
   fireFlame.visible = false;
   scene.add(fireFlame);
 
-  localPos.x = role === 'girl' ? 3 : -3;
-  localPos.z = 5;
+  localPos.x = role === 'girl' ? 2 : -2;
+  localPos.z = 3;
   localGroup = buildCharacter(role);
   localGroup.position.set(localPos.x, 0, localPos.z);
   scene.add(localGroup);
@@ -294,6 +296,29 @@ function updateActionButton() {
   }
 }
 
+function updateHint() {
+  const hint = document.getElementById('hint');
+  let text = '';
+
+  if (myHolding === 'wood' && !houseState.wallPlaced) {
+    const d = Math.round(dist2D(localPos.x, localPos.z, WALL_POS.x, WALL_POS.z));
+    if (d >= PROXIMITY) text = `🧱 امشِ نحو الحيط (${d} م)`;
+  } else if (myHolding === 'rod') {
+    if ((campfireState.fish || 0) > 0 && !campfireState.lit) {
+      const d = Math.round(dist2D(localPos.x, localPos.z, FIRE_POS.x, FIRE_POS.z));
+      if (d >= PROXIMITY) text = `🔥 رجّع عالنار حتى تشعلها (${d} م)`;
+    } else {
+      const d = Math.round(dist2D(localPos.x, localPos.z, FISH_POS.x, FISH_POS.z));
+      if (d >= PROXIMITY) text = `🎣 امشِ لمكان الصيد (${d} م)`;
+    }
+  } else if (!houseState.wallPlaced) {
+    text = '🎒 افتح قائمة التجهيز واسحب خشب حتى تبني الحيط';
+  }
+
+  hint.textContent = text;
+  hint.classList.toggle('hidden', !text);
+}
+
 function buildWall() {
   houseRef.update({ wallPlaced: true, builtBy: playerId });
   myPlayerRef.child('holding').set(null);
@@ -316,7 +341,7 @@ function syncPosition(now) {
 }
 
 function updateCamera() {
-  const desired = new THREE.Vector3(localPos.x, 12, localPos.z + 14);
+  const desired = new THREE.Vector3(localPos.x, CAMERA_HEIGHT, localPos.z + CAMERA_BACK);
   camera.position.lerp(desired, 0.08);
   camera.lookAt(localPos.x, 1, localPos.z);
 }
@@ -354,6 +379,7 @@ function loop(now) {
 
   syncPosition(now);
   updateActionButton();
+  updateHint();
   updateCamera();
   renderer.render(scene, camera);
   requestAnimationFrame(loop);
