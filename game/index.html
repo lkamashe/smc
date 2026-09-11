@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>جزيرتنا الصامتة</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div id="role-modal" class="modal">
+  <div class="modal-box">
+    <h2>مين حابب/حابة تلعب؟</h2>
+    <button id="role-boy" class="role-btn">علي (الشب)</button>
+    <button id="role-girl" class="role-btn">ريم (البنت)</button>
+  </div>
+</div>
+
+<div id="hud">
+  <button id="share-link-btn" class="hud-btn">🔗 انسخ رابط الجزيرة</button>
+  <button id="inventory-btn" class="hud-btn">🎒 قائمة التجهيز</button>
+</div>
+
+<div id="inventory-panel" class="panel hidden">
+  <h3>قائمة التجهيز</h3>
+  <div class="inv-row">
+    <span>خشب: <b id="wood-count">0</b></span>
+    <button id="take-wood-btn">اسحب خشب</button>
+  </div>
+  <div class="inv-row">
+    <span>سنارة: <b id="rod-count">0</b></span>
+    <button id="take-rod-btn">اسحب سنارة</button>
+  </div>
+  <button id="close-inventory-btn" class="close-btn">إغلاق</button>
+</div>
+
+<div id="holding-badge" class="hidden"></div>
+
+<button id="action-btn" class="hidden"></button>
+
+<div id="dpad">
+  <button id="btn-up" class="dpad-btn dpad-up">▲</button>
+  <div class="dpad-mid">
+    <button id="btn-left" class="dpad-btn">◀</button>
+    <button id="btn-down" class="dpad-btn">▼</button>
+    <button id="btn-right" class="dpad-btn">▶</button>
+  </div>
+</div>
+
+<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="main.js"></script>
+</body>
+</html>
