@@ -135,16 +135,44 @@ function buildTree(x, z) {
   return group;
 }
 
+function triangleFin(width, height) {
+  const shape = new THREE.Shape();
+  shape.moveTo(0, height / 2);
+  shape.lineTo(-width, 0);
+  shape.lineTo(0, -height / 2);
+  shape.closePath();
+  return new THREE.ShapeGeometry(shape);
+}
+
 function buildFish() {
   const group = new THREE.Group();
-  const mat = new THREE.MeshStandardMaterial({ color: 0x8fb8d9 });
-  const body = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.5, 6), mat);
-  body.rotation.z = Math.PI / 2;
+  const bodyMat = new THREE.MeshStandardMaterial({ color: 0xff9d4d, roughness: 0.4, metalness: 0.15 });
+  const finMat = new THREE.MeshStandardMaterial({ color: 0xffcf9e, side: THREE.DoubleSide, roughness: 0.5 });
+  const eyeMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a });
+
+  // جسم منخفض الأوجه (Low-poly) مفلطح ومطاول ليشبه جسم السمكة
+  const body = new THREE.Mesh(new THREE.OctahedronGeometry(0.22, 0), bodyMat);
+  body.scale.set(1.7, 0.95, 0.75);
   group.add(body);
-  const tail = new THREE.Mesh(new THREE.ConeGeometry(0.14, 0.22, 4), mat);
-  tail.rotation.z = -Math.PI / 2;
-  tail.position.x = -0.32;
+
+  const tail = new THREE.Mesh(triangleFin(0.24, 0.3), finMat);
+  tail.rotation.y = Math.PI / 2;
+  tail.position.set(-0.3, 0, 0);
   group.add(tail);
+
+  const dorsal = new THREE.Mesh(triangleFin(0.16, 0.14), finMat);
+  dorsal.rotation.x = -Math.PI / 2;
+  dorsal.rotation.z = Math.PI / 2;
+  dorsal.position.set(0.02, 0.16, 0);
+  group.add(dorsal);
+
+  const eyeGeo = new THREE.SphereGeometry(0.035, 6, 6);
+  const eyeL = new THREE.Mesh(eyeGeo, eyeMat);
+  eyeL.position.set(0.2, 0.05, 0.14);
+  const eyeR = new THREE.Mesh(eyeGeo, eyeMat);
+  eyeR.position.set(0.2, 0.05, -0.14);
+  group.add(eyeL, eyeR);
+
   return group;
 }
 
