@@ -49,6 +49,8 @@ let localGroup;
 const wallGhosts = {};
 const wallSolids = {};
 let fireUnlit, fireFlame;
+let houseDoor, houseWindowL, houseWindowR, houseRoof;
+let waterMap;
 const remoteGroups = {};
 const placedFishMeshes = {};
 
@@ -78,61 +80,173 @@ function makeSweaterTexture(text, bg) {
   return texture;
 }
 
+function makeSandTexture() {
+  const c = document.createElement('canvas');
+  c.width = c.height = 256;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#e4d19a';
+  ctx.fillRect(0, 0, 256, 256);
+  for (let i = 0; i < 2200; i++) {
+    const x = Math.random() * 256;
+    const y = Math.random() * 256;
+    ctx.fillStyle = Math.random() < 0.5 ? 'rgba(170, 140, 90, 0.16)' : 'rgba(255, 245, 210, 0.28)';
+    ctx.fillRect(x, y, 1.4, 1.4);
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(7, 7);
+  return tex;
+}
+
+function makeWaterTexture() {
+  const c = document.createElement('canvas');
+  c.width = c.height = 256;
+  const ctx = c.getContext('2d');
+  const grad = ctx.createLinearGradient(0, 0, 256, 256);
+  grad.addColorStop(0, '#49b0dd');
+  grad.addColorStop(1, '#2e86b8');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 256, 256);
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.28)';
+  ctx.lineWidth = 2;
+  for (let i = 0; i < 9; i++) {
+    ctx.beginPath();
+    const y = i * 28 + 8;
+    ctx.moveTo(0, y);
+    for (let x = 0; x <= 256; x += 16) {
+      ctx.lineTo(x, y + Math.sin(x * 0.06 + i) * 5);
+    }
+    ctx.stroke();
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(10, 10);
+  return tex;
+}
+
+function makeWoodTexture() {
+  const c = document.createElement('canvas');
+  c.width = 128;
+  c.height = 128;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#8a5a34';
+  ctx.fillRect(0, 0, 128, 128);
+  for (let i = 0; i < 14; i++) {
+    ctx.strokeStyle = `rgba(60, 35, 15, ${0.15 + Math.random() * 0.2})`;
+    ctx.lineWidth = 1 + Math.random();
+    ctx.beginPath();
+    const y = i * 9 + Math.random() * 4;
+    ctx.moveTo(0, y);
+    ctx.bezierCurveTo(32, y + 6, 96, y - 6, 128, y);
+    ctx.stroke();
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(2, 1);
+  return tex;
+}
+
+function enableShadows(obj) {
+  obj.traverse((o) => {
+    if (o.isMesh) {
+      o.castShadow = true;
+      o.receiveShadow = true;
+    }
+  });
+  return obj;
+}
+
 function buildCharacter(charRole) {
   const isBoy = charRole !== 'girl';
   const shirtColor = isBoy ? '#2f6fb0' : '#c9528f';
   const pantsColor = isBoy ? '#33404d' : '#4a3f5c';
+  const skinColor = 0xe8b98d;
+  const hairColor = isBoy ? 0x2b1d14 : 0x3a2418;
   const sweaterText = isBoy ? 'حبيب ريم' : 'حبيبة علي';
 
   const group = new THREE.Group();
 
-  const legGeo = new THREE.BoxGeometry(0.35, 0.9, 0.35);
-  const legMat = new THREE.MeshStandardMaterial({ color: pantsColor });
+  const legGeo = new THREE.CapsuleGeometry(0.16, 0.55, 4, 8);
+  const legMat = new THREE.MeshStandardMaterial({ color: pantsColor, roughness: 0.75 });
   const legL = new THREE.Mesh(legGeo, legMat);
-  legL.position.set(-0.22, 0.45, 0);
+  legL.position.set(-0.18, 0.4, 0);
   const legR = new THREE.Mesh(legGeo, legMat);
-  legR.position.set(0.22, 0.45, 0);
+  legR.position.set(0.18, 0.4, 0);
   group.add(legL, legR);
 
-  const torsoGeo = new THREE.BoxGeometry(0.9, 1.0, 0.5);
-  const plainMat = new THREE.MeshStandardMaterial({ color: shirtColor });
-  const frontMat = new THREE.MeshStandardMaterial({ map: makeSweaterTexture(sweaterText, shirtColor) });
-  // ترتيب أوجه BoxGeometry: [+x, -x, +y, -y, +z, -z] — النص محطوط عالوجه الأمامي (+z) بس
-  const torso = new THREE.Mesh(torsoGeo, [plainMat, plainMat, plainMat, plainMat, frontMat, plainMat]);
-  torso.position.set(0, 1.4, 0);
+  const shoeGeo = new THREE.BoxGeometry(0.22, 0.12, 0.32);
+  const shoeMat = new THREE.MeshStandardMaterial({ color: 0x2a2a2a, roughness: 0.6 });
+  const shoeL = new THREE.Mesh(shoeGeo, shoeMat);
+  shoeL.position.set(-0.18, 0.08, 0.05);
+  const shoeR = new THREE.Mesh(shoeGeo, shoeMat);
+  shoeR.position.set(0.18, 0.08, 0.05);
+  group.add(shoeL, shoeR);
+
+  const torsoMat = new THREE.MeshStandardMaterial({ color: shirtColor, roughness: 0.65 });
+  const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.36, 0.5, 4, 10), torsoMat);
+  torso.position.set(0, 1.3, 0);
   group.add(torso);
 
-  const armGeo = new THREE.BoxGeometry(0.3, 0.9, 0.3);
-  const armL = new THREE.Mesh(armGeo, plainMat);
-  armL.position.set(-0.65, 1.4, 0);
-  const armR = new THREE.Mesh(armGeo, plainMat);
-  armR.position.set(0.65, 1.4, 0);
+  const sweaterTex = makeSweaterTexture(sweaterText, shirtColor);
+  const sweaterPlane = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.5, 0.5),
+    new THREE.MeshStandardMaterial({ map: sweaterTex, roughness: 0.7 })
+  );
+  sweaterPlane.position.set(0, 1.3, 0.4);
+  group.add(sweaterPlane);
+
+  const armGeo = new THREE.CapsuleGeometry(0.11, 0.5, 4, 8);
+  const armMat = new THREE.MeshStandardMaterial({ color: shirtColor, roughness: 0.65 });
+  const armL = new THREE.Mesh(armGeo, armMat);
+  armL.position.set(-0.52, 1.32, 0);
+  armL.rotation.z = 0.14;
+  const armR = new THREE.Mesh(armGeo, armMat);
+  armR.position.set(0.52, 1.32, 0);
+  armR.rotation.z = -0.14;
   group.add(armL, armR);
 
-  const headGeo = new THREE.SphereGeometry(0.35, 12, 10);
-  const headMat = new THREE.MeshStandardMaterial({ color: 0xe8b98d });
+  const handGeo = new THREE.SphereGeometry(0.1, 8, 8);
+  const handMat = new THREE.MeshStandardMaterial({ color: skinColor, roughness: 0.6 });
+  const handL = new THREE.Mesh(handGeo, handMat);
+  handL.position.set(-0.6, 1.02, 0);
+  const handR = new THREE.Mesh(handGeo, handMat);
+  handR.position.set(0.6, 1.02, 0);
+  group.add(handL, handR);
+
+  const headGeo = new THREE.SphereGeometry(0.32, 16, 14);
+  const headMat = new THREE.MeshStandardMaterial({ color: skinColor, roughness: 0.55 });
   const head = new THREE.Mesh(headGeo, headMat);
-  head.position.set(0, 2.15, 0);
+  head.position.set(0, 2.0, 0);
   group.add(head);
 
-  return group;
+  const hairMat = new THREE.MeshStandardMaterial({ color: hairColor, roughness: 0.85 });
+  const hair = new THREE.Mesh(
+    new THREE.SphereGeometry(0.34, 16, 14, 0, Math.PI * 2, 0, Math.PI * 0.5),
+    hairMat
+  );
+  hair.position.set(0, 2.06, 0);
+  group.add(hair);
+
+  return enableShadows(group);
 }
 
 function buildTree(x, z) {
   const group = new THREE.Group();
-  const trunk = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.15, 0.2, 1.4, 6),
-    new THREE.MeshStandardMaterial({ color: 0x6b4a2f })
-  );
+  const trunkMat = new THREE.MeshStandardMaterial({ color: 0x6b4a2f, roughness: 0.9 });
+  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.22, 1.4, 7), trunkMat);
   trunk.position.y = 0.7;
-  const leaves = new THREE.Mesh(
-    new THREE.ConeGeometry(1.1, 2, 7),
-    new THREE.MeshStandardMaterial({ color: 0x3c8a4c })
-  );
-  leaves.position.y = 2.1;
-  group.add(trunk, leaves);
+
+  const leafMat = new THREE.MeshStandardMaterial({ color: 0x3c8a4c, roughness: 0.85 });
+  const leaf1 = new THREE.Mesh(new THREE.ConeGeometry(1.15, 1.3, 8), leafMat);
+  leaf1.position.y = 1.9;
+  const leaf2 = new THREE.Mesh(new THREE.ConeGeometry(0.9, 1.1, 8), leafMat);
+  leaf2.position.y = 2.6;
+  const leaf3 = new THREE.Mesh(new THREE.ConeGeometry(0.6, 0.9, 8), leafMat);
+  leaf3.position.y = 3.2;
+
+  group.add(trunk, leaf1, leaf2, leaf3);
   group.position.set(x, 0, z);
-  return group;
+  return enableShadows(group);
 }
 
 function triangleFin(width, height) {
@@ -150,7 +264,6 @@ function buildFish() {
   const finMat = new THREE.MeshStandardMaterial({ color: 0xffcf9e, side: THREE.DoubleSide, roughness: 0.5 });
   const eyeMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a });
 
-  // جسم منخفض الأوجه (Low-poly) مفلطح ومطاول ليشبه جسم السمكة
   const body = new THREE.Mesh(new THREE.OctahedronGeometry(0.22, 0), bodyMat);
   body.scale.set(1.7, 0.95, 0.75);
   group.add(body);
@@ -173,49 +286,81 @@ function buildFish() {
   eyeR.position.set(0.2, 0.05, -0.14);
   group.add(eyeL, eyeR);
 
-  return group;
+  return enableShadows(group);
+}
+
+function buildRoof() {
+  const group = new THREE.Group();
+  const roofMat = new THREE.MeshStandardMaterial({ color: 0x7a3b2e, roughness: 0.8 });
+  const panelGeo = new THREE.BoxGeometry(WALL_LENGTH + 0.7, 0.15, WALL_LENGTH / 2 + 0.6);
+
+  const left = new THREE.Mesh(panelGeo, roofMat);
+  left.position.set(HOUSE_CENTER.x, WALL_HEIGHT + 0.85, HOUSE_CENTER.z - WALL_LENGTH / 4 + 0.15);
+  left.rotation.x = -0.5;
+
+  const right = new THREE.Mesh(panelGeo, roofMat);
+  right.position.set(HOUSE_CENTER.x, WALL_HEIGHT + 0.85, HOUSE_CENTER.z + WALL_LENGTH / 4 - 0.15);
+  right.rotation.x = 0.5;
+
+  group.add(left, right);
+  group.visible = false;
+  return enableShadows(group);
 }
 
 function initScene() {
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0xbfe6ff);
+  scene.fog = new THREE.Fog(0xbfe6ff, 45, 150);
 
   camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 500);
 
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(innerWidth, innerHeight);
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   document.body.appendChild(renderer.domElement);
 
-  const ambient = new THREE.AmbientLight(0xffffff, 0.7);
-  const sun = new THREE.DirectionalLight(0xfff3d6, 0.9);
-  sun.position.set(30, 40, 10);
+  const ambient = new THREE.AmbientLight(0xffffff, 0.6);
+  const sun = new THREE.DirectionalLight(0xfff3d6, 1.0);
+  sun.position.set(24, 32, 14);
+  sun.castShadow = true;
+  sun.shadow.mapSize.set(1024, 1024);
+  sun.shadow.camera.left = -26;
+  sun.shadow.camera.right = 26;
+  sun.shadow.camera.top = 26;
+  sun.shadow.camera.bottom = -26;
+  sun.shadow.camera.near = 1;
+  sun.shadow.camera.far = 80;
   scene.add(ambient, sun);
 
+  waterMap = makeWaterTexture();
   const water = new THREE.Mesh(
-    new THREE.CircleGeometry(ISLAND_RADIUS * 4, 32),
-    new THREE.MeshStandardMaterial({ color: 0x3fa7d6 })
+    new THREE.CircleGeometry(ISLAND_RADIUS * 4, 40),
+    new THREE.MeshStandardMaterial({ map: waterMap, roughness: 0.25, metalness: 0.15, transparent: true, opacity: 0.94 })
   );
   water.rotation.x = -Math.PI / 2;
   water.position.y = -0.2;
+  water.receiveShadow = true;
   scene.add(water);
 
   const island = new THREE.Mesh(
-    new THREE.CylinderGeometry(ISLAND_RADIUS, ISLAND_RADIUS * 1.08, 2, 8),
-    new THREE.MeshStandardMaterial({ color: 0xe4d19a })
+    new THREE.CylinderGeometry(ISLAND_RADIUS, ISLAND_RADIUS * 1.08, 2, 24),
+    new THREE.MeshStandardMaterial({ map: makeSandTexture(), roughness: 0.95 })
   );
   island.position.y = -1;
+  island.receiveShadow = true;
   scene.add(island);
 
-  for (let i = 0; i < 10; i++) {
-    const angle = (i / 10) * Math.PI * 2;
+  for (let i = 0; i < 12; i++) {
+    const angle = (i / 12) * Math.PI * 2;
     const r = ISLAND_RADIUS * (0.55 + Math.random() * 0.3);
     scene.add(buildTree(Math.cos(angle) * r, Math.sin(angle) * r));
   }
 
   const wallGeo = new THREE.BoxGeometry(WALL_LENGTH, WALL_HEIGHT, WALL_THICKNESS);
   const ghostMat = new THREE.MeshStandardMaterial({ color: 0x8bd67a, transparent: true, opacity: 0.4 });
-  const solidMat = new THREE.MeshStandardMaterial({ color: 0x8a5a34 });
+  const solidMat = new THREE.MeshStandardMaterial({ map: makeWoodTexture(), roughness: 0.85 });
   WALL_SPECS.forEach((w) => {
     const ghost = new THREE.Mesh(wallGeo, ghostMat);
     ghost.position.set(w.x, WALL_HEIGHT / 2, w.z);
@@ -227,27 +372,59 @@ function initScene() {
     solid.position.set(w.x, WALL_HEIGHT / 2, w.z);
     solid.rotation.y = w.rotY;
     solid.visible = false;
+    solid.castShadow = true;
+    solid.receiveShadow = true;
     scene.add(solid);
     wallSolids[w.id] = solid;
   });
 
+  houseDoor = new THREE.Mesh(
+    new THREE.BoxGeometry(1.1, 1.7, 0.08),
+    new THREE.MeshStandardMaterial({ color: 0x4a3423, roughness: 0.7 })
+  );
+  houseDoor.position.set(HOUSE_CENTER.x, 0.85, HOUSE_CENTER.z + WALL_LENGTH / 2 + 0.05);
+  houseDoor.visible = false;
+  houseDoor.castShadow = true;
+  scene.add(houseDoor);
+
+  const windowMat = new THREE.MeshStandardMaterial({
+    color: 0xbfe6ff,
+    roughness: 0.2,
+    metalness: 0.25,
+    emissive: 0x224466,
+    emissiveIntensity: 0.15,
+  });
+  const windowGeo = new THREE.PlaneGeometry(0.8, 0.8);
+  houseWindowL = new THREE.Mesh(windowGeo, windowMat);
+  houseWindowL.position.set(HOUSE_CENTER.x - 1.5, 1.3, HOUSE_CENTER.z - WALL_LENGTH / 2 - 0.03);
+  houseWindowR = new THREE.Mesh(windowGeo, windowMat);
+  houseWindowR.position.set(HOUSE_CENTER.x + 1.5, 1.3, HOUSE_CENTER.z - WALL_LENGTH / 2 - 0.03);
+  houseWindowL.visible = houseWindowR.visible = false;
+  scene.add(houseWindowL, houseWindowR);
+
+  houseRoof = buildRoof();
+  scene.add(houseRoof);
+
   const fishMarker = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.6, 0.6, 0.15, 10),
-    new THREE.MeshStandardMaterial({ color: 0xf2d33c })
+    new THREE.CylinderGeometry(0.6, 0.6, 0.15, 12),
+    new THREE.MeshStandardMaterial({ color: 0xf2d33c, roughness: 0.6 })
   );
   fishMarker.position.set(FISH_POS.x, 0.05, FISH_POS.z);
+  fishMarker.receiveShadow = true;
   scene.add(fishMarker);
 
   fireUnlit = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.7, 0.9, 0.4, 8),
-    new THREE.MeshStandardMaterial({ color: 0x555555 })
+    new THREE.CylinderGeometry(0.7, 0.9, 0.4, 10),
+    new THREE.MeshStandardMaterial({ color: 0x555555, roughness: 0.9 })
   );
   fireUnlit.position.set(FIRE_POS.x, 0.2, FIRE_POS.z);
+  fireUnlit.castShadow = true;
+  fireUnlit.receiveShadow = true;
   scene.add(fireUnlit);
 
   fireFlame = new THREE.Mesh(
-    new THREE.ConeGeometry(0.4, 0.9, 8),
-    new THREE.MeshStandardMaterial({ color: 0xff7a1a, emissive: 0xaa3300 })
+    new THREE.ConeGeometry(0.4, 0.9, 10),
+    new THREE.MeshStandardMaterial({ color: 0xff7a1a, emissive: 0xaa3300, roughness: 0.4 })
   );
   fireFlame.position.set(FIRE_POS.x, 0.9, FIRE_POS.z);
   fireFlame.visible = false;
@@ -300,6 +477,10 @@ function initScene() {
       wallGhosts[w.id].visible = !built;
       wallSolids[w.id].visible = built;
     });
+    houseDoor.visible = !!walls.south;
+    houseWindowL.visible = !!walls.north;
+    houseWindowR.visible = !!walls.north;
+    houseRoof.visible = WALL_SPECS.every((w) => walls[w.id]);
   });
 
   campfireRef.on('value', (snap) => {
@@ -502,6 +683,11 @@ function loop(now) {
     localPos.z = nz;
     localGroup.position.set(nx, 0, nz);
     localGroup.rotation.y = Math.atan2(dx, dz);
+  }
+
+  if (waterMap) {
+    waterMap.offset.x += dt * 0.02;
+    waterMap.offset.y += dt * 0.01;
   }
 
   syncPosition(now);
