@@ -82,6 +82,20 @@ canvas {
   cursor: pointer;
 }
 
+#hint {
+  position: fixed;
+  top: 62px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(20, 30, 40, 0.75);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  z-index: 18;
+  white-space: nowrap;
+}
+
 .panel {
   position: fixed;
   top: 70px;
