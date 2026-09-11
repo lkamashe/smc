@@ -154,6 +154,17 @@ canvas {
   z-index: 20;
 }
 
+#fish-badge {
+  position: fixed;
+  top: 58px;
+  inset-inline-end: 14px;
+  background: rgba(191, 216, 233, 0.95);
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-size: 14px;
+  z-index: 20;
+}
+
 #action-btn {
   position: fixed;
   bottom: 130px;
