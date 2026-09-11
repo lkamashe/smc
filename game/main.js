@@ -5,7 +5,17 @@ const PROXIMITY = 4;        // مسافة التفاعل مع نقاط الاه�
 const CAMERA_HEIGHT = 6;    // ارتفاع الكاميرا فوق اللاعب
 const CAMERA_BACK = 9;      // بعد الكاميرا وراء اللاعب
 
-const WALL_POS = { x: 6, z: -6 };
+const HOUSE_CENTER = { x: 6, z: -6 };
+const WALL_LENGTH = 6;
+const WALL_HEIGHT = 2.2;
+const WALL_THICKNESS = 0.3;
+const WALL_SPECS = [
+  { id: 'north', x: HOUSE_CENTER.x, z: HOUSE_CENTER.z - WALL_LENGTH / 2, rotY: 0 },
+  { id: 'south', x: HOUSE_CENTER.x, z: HOUSE_CENTER.z + WALL_LENGTH / 2, rotY: 0 },
+  { id: 'east', x: HOUSE_CENTER.x + WALL_LENGTH / 2, z: HOUSE_CENTER.z, rotY: Math.PI / 2 },
+  { id: 'west', x: HOUSE_CENTER.x - WALL_LENGTH / 2, z: HOUSE_CENTER.z, rotY: Math.PI / 2 },
+];
+
 const FISH_POS = { x: 0, z: ISLAND_RADIUS - 4 };
 const FIRE_POS = { x: -6, z: -6 };
 
@@ -35,12 +45,14 @@ const campfireRef = islandRef.child('campfire');
 
 let scene, camera, renderer;
 let localGroup;
-let wallGhost, wallSolid, fireUnlit, fireFlame;
+const wallGhosts = {};
+const wallSolids = {};
+let fireUnlit, fireFlame;
 const remoteGroups = {};
 
 const localPos = { x: 0, z: 0 };
 let myHolding = null;
-let houseState = { wallPlaced: false };
+let houseState = {};
 let campfireState = { fish: 0, lit: false };
 
 const moveState = { up: false, down: false, left: false, right: false };
@@ -157,15 +169,23 @@ function initScene() {
     scene.add(buildTree(Math.cos(angle) * r, Math.sin(angle) * r));
   }
 
+  const wallGeo = new THREE.BoxGeometry(WALL_LENGTH, WALL_HEIGHT, WALL_THICKNESS);
   const ghostMat = new THREE.MeshStandardMaterial({ color: 0x8bd67a, transparent: true, opacity: 0.4 });
-  wallGhost = new THREE.Mesh(new THREE.BoxGeometry(4, 2, 0.3), ghostMat);
-  wallGhost.position.set(WALL_POS.x, 1, WALL_POS.z);
-  scene.add(wallGhost);
+  const solidMat = new THREE.MeshStandardMaterial({ color: 0x8a5a34 });
+  WALL_SPECS.forEach((w) => {
+    const ghost = new THREE.Mesh(wallGeo, ghostMat);
+    ghost.position.set(w.x, WALL_HEIGHT / 2, w.z);
+    ghost.rotation.y = w.rotY;
+    scene.add(ghost);
+    wallGhosts[w.id] = ghost;
 
-  wallSolid = new THREE.Mesh(new THREE.BoxGeometry(4, 2, 0.3), new THREE.MeshStandardMaterial({ color: 0x8a5a34 }));
-  wallSolid.position.set(WALL_POS.x, 1, WALL_POS.z);
-  wallSolid.visible = false;
-  scene.add(wallSolid);
+    const solid = new THREE.Mesh(wallGeo, solidMat);
+    solid.position.set(w.x, WALL_HEIGHT / 2, w.z);
+    solid.rotation.y = w.rotY;
+    solid.visible = false;
+    scene.add(solid);
+    wallSolids[w.id] = solid;
+  });
 
   const fishMarker = new THREE.Mesh(
     new THREE.CylinderGeometry(0.6, 0.6, 0.15, 10),
@@ -210,13 +230,17 @@ function initScene() {
     updateHoldingBadge();
   });
 
-  inventoryRef.transaction((cur) => cur || { wood: 6, rods: 2 });
+  inventoryRef.transaction((cur) => cur || { wood: 10, rods: 2 });
   inventoryRef.on('value', (snap) => updateInventoryUI(snap.val() || {}));
 
   houseRef.on('value', (snap) => {
-    houseState = snap.val() || { wallPlaced: false };
-    wallGhost.visible = !houseState.wallPlaced;
-    wallSolid.visible = !!houseState.wallPlaced;
+    houseState = snap.val() || {};
+    const walls = houseState.walls || {};
+    WALL_SPECS.forEach((w) => {
+      const built = !!walls[w.id];
+      wallGhosts[w.id].visible = !built;
+      wallSolids[w.id].visible = built;
+    });
   });
 
   campfireRef.on('value', (snap) => {
@@ -272,17 +296,37 @@ function dist2D(x1, z1, x2, z2) {
   return Math.hypot(x1 - x2, z1 - z2);
 }
 
+function nearestUnbuiltWall() {
+  const walls = houseState.walls || {};
+  let best = null;
+  let bestDist = Infinity;
+  WALL_SPECS.forEach((w) => {
+    if (walls[w.id]) return;
+    const d = dist2D(localPos.x, localPos.z, w.x, w.z);
+    if (d < bestDist) {
+      bestDist = d;
+      best = w;
+    }
+  });
+  return best ? { wall: best, dist: bestDist } : null;
+}
+
+function houseComplete() {
+  const walls = houseState.walls || {};
+  return WALL_SPECS.every((w) => walls[w.id]);
+}
+
 function updateActionButton() {
   const btn = document.getElementById('action-btn');
-  const nearWall = dist2D(localPos.x, localPos.z, WALL_POS.x, WALL_POS.z) < PROXIMITY;
+  const nearestWall = nearestUnbuiltWall();
   const nearFish = dist2D(localPos.x, localPos.z, FISH_POS.x, FISH_POS.z) < PROXIMITY;
   const nearFire = dist2D(localPos.x, localPos.z, FIRE_POS.x, FIRE_POS.z) < PROXIMITY;
 
   btn.onclick = null;
-  if (myHolding === 'wood' && nearWall && !houseState.wallPlaced) {
+  if (myHolding === 'wood' && nearestWall && nearestWall.dist < PROXIMITY) {
     btn.textContent = 'ابني الحيط 🧱';
     btn.classList.remove('hidden');
-    btn.onclick = buildWall;
+    btn.onclick = () => buildWall(nearestWall.wall.id);
   } else if (myHolding === 'rod' && nearFish) {
     btn.textContent = 'اصطد سمكة 🎣';
     btn.classList.remove('hidden');
@@ -300,9 +344,11 @@ function updateHint() {
   const hint = document.getElementById('hint');
   let text = '';
 
-  if (myHolding === 'wood' && !houseState.wallPlaced) {
-    const d = Math.round(dist2D(localPos.x, localPos.z, WALL_POS.x, WALL_POS.z));
-    if (d >= PROXIMITY) text = `🧱 امشِ نحو الحيط (${d} م)`;
+  if (myHolding === 'wood' && !houseComplete()) {
+    const nearest = nearestUnbuiltWall();
+    if (nearest && nearest.dist >= PROXIMITY) {
+      text = `🧱 امشِ نحو الحيط (${Math.round(nearest.dist)} م)`;
+    }
   } else if (myHolding === 'rod') {
     if ((campfireState.fish || 0) > 0 && !campfireState.lit) {
       const d = Math.round(dist2D(localPos.x, localPos.z, FIRE_POS.x, FIRE_POS.z));
@@ -311,16 +357,16 @@ function updateHint() {
       const d = Math.round(dist2D(localPos.x, localPos.z, FISH_POS.x, FISH_POS.z));
       if (d >= PROXIMITY) text = `🎣 امشِ لمكان الصيد (${d} م)`;
     }
-  } else if (!houseState.wallPlaced) {
-    text = '🎒 افتح قائمة التجهيز واسحب خشب حتى تبني الحيط';
+  } else if (!houseComplete()) {
+    text = '🎒 افتح قائمة التجهيز واسحب خشب حتى تبني حيط من البيت';
   }
 
   hint.textContent = text;
   hint.classList.toggle('hidden', !text);
 }
 
-function buildWall() {
-  houseRef.update({ wallPlaced: true, builtBy: playerId });
+function buildWall(id) {
+  houseRef.child('walls').child(id).set(true);
   myPlayerRef.child('holding').set(null);
 }
 
