@@ -667,6 +667,21 @@ function dist2D(x1, z1, x2, z2) {
   return Math.hypot(x1 - x2, z1 - z2);
 }
 
+const PLAYER_RADIUS = 0.35;
+
+function collidesWithWalls(x, z) {
+  const walls = houseState.walls || {};
+  for (const p of WALL_PANELS) {
+    if (!walls[p.id]) continue;
+    const halfLen = p.length / 2 + PLAYER_RADIUS;
+    const halfThick = WALL_THICKNESS / 2 + PLAYER_RADIUS;
+    const halfX = p.rotY === 0 ? halfLen : halfThick;
+    const halfZ = p.rotY === 0 ? halfThick : halfLen;
+    if (x > p.x - halfX && x < p.x + halfX && z > p.z - halfZ && z < p.z + halfZ) return true;
+  }
+  return false;
+}
+
 function nearestUnbuiltWall() {
   const walls = houseState.walls || {};
   let bestId = null;
@@ -801,9 +816,16 @@ function loop(now) {
       nx *= scale;
       nz *= scale;
     }
-    localPos.x = nx;
-    localPos.z = nz;
-    localGroup.position.set(nx, 0, nz);
+
+    // تصادم مع الحيطان المبنية، بس مع سماح بالانزلاق عالمحور التاني
+    let finalX = localPos.x;
+    let finalZ = localPos.z;
+    if (!collidesWithWalls(nx, localPos.z)) finalX = nx;
+    if (!collidesWithWalls(finalX, nz)) finalZ = nz;
+
+    localPos.x = finalX;
+    localPos.z = finalZ;
+    localGroup.position.set(finalX, 0, finalZ);
     localGroup.rotation.y = Math.atan2(dx, dz);
   }
 
